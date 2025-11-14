@@ -160,9 +160,9 @@ function renderCheckoutItems() {
     itemElement.innerHTML = `
       <div class="flex-1">
         <h4 class="font-semibold text-gray-900">${item.name}</h4>
-        <p class="text-sm text-gray-500">Qty: ${item.quantity}</p>
+        <p class="text-sm text-gray-500">Quantidade: ${item.quantity}</p>
       </div>
-      <p class="font-semibold text-gray-900">$${(item.price * item.quantity).toFixed(2)}</p>
+      <p class="font-semibold text-gray-900">R$ ${(item.price * item.quantity).toFixed(2)}</p>
     `;
     checkoutItemsContainer.appendChild(itemElement);
     subtotal += item.price * item.quantity;
