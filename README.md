@@ -1,6 +1,6 @@
 # Lojagtec
 
-This is a project for an online shop for a regional business that sells water filters, water fountains, and services related to their maintenance.
+This is a project is an online shop for a regional business that sells water filters, water fountains, and services related to their maintenance.
 
 ## Tech Stack
 
@@ -13,7 +13,6 @@ This is a project for an online shop for a regional business that sells water fi
 ### Prerequisites
 
 *   [Go](https://golang.org/doc/install)
-*   [Node.js and npm](https://nodejs.org/en/download/)
 *   [PostgreSQL](https://www.postgresql.org/download/)
 
 ### Installation
@@ -25,16 +24,10 @@ This is a project for an online shop for a regional business that sells water fi
     cd lojagtec
     ```
 
-2.  **Install frontend dependencies:**
+2.  **Build the CSS:**
 
     ```bash
-    npm install
-    ```
-
-3.  **Build the CSS:**
-
-    ```bash
-    npm run build:css
+    tailwind -i ./web/static/css/style.css -o ./web/static/css/dist/style.css -w
     ```
 
     This command will watch for changes in `web/static/css/style.css` and rebuild the `web/static/css/dist/style.css` file.

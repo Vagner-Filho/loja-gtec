@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"lojagtec/internal/database"
+	"lojagtec/internal/products"
 )
 
 func main() {
@@ -27,6 +28,72 @@ func main() {
 		}
 
 		tmpl.Execute(w, nil)
+	})
+
+	http.HandleFunc("/checkout.html", func(w http.ResponseWriter, r *http.Request) {
+		tmpl, err := template.ParseFiles("web/templates/checkout.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		tmpl.Execute(w, nil)
+	})
+
+	// Product filter routes
+	http.HandleFunc("/products/bebedouros", func(w http.ResponseWriter, r *http.Request) {
+		tmpl, err := template.ParseFiles("web/templates/product-cards.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		prods := products.GetProductsByCategory("bebedouros")
+		tmpl.Execute(w, prods)
+	})
+
+	http.HandleFunc("/products/purificadores", func(w http.ResponseWriter, r *http.Request) {
+		tmpl, err := template.ParseFiles("web/templates/product-cards.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		prods := products.GetProductsByCategory("purificadores")
+		tmpl.Execute(w, prods)
+	})
+
+	http.HandleFunc("/products/refis", func(w http.ResponseWriter, r *http.Request) {
+		tmpl, err := template.ParseFiles("web/templates/product-cards.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		prods := products.GetProductsByCategory("refis")
+		tmpl.Execute(w, prods)
+	})
+
+	http.HandleFunc("/products/pecas", func(w http.ResponseWriter, r *http.Request) {
+		tmpl, err := template.ParseFiles("web/templates/product-cards.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		prods := products.GetProductsByCategory("pecas")
+		tmpl.Execute(w, prods)
+	})
+
+	http.HandleFunc("/products/all", func(w http.ResponseWriter, r *http.Request) {
+		tmpl, err := template.ParseFiles("web/templates/product-cards.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		prods := products.GetProductsByCategory("")
+		tmpl.Execute(w, prods)
 	})
 
 	fmt.Println("Server starting at port 8080")

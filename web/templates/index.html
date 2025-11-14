@@ -3,58 +3,148 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lojagtec</title>
+    <title>Loja G-TEC Multimarcas</title>
+    <link href="/static/images/favicon.png" type="image/x-icon" rel="icon">
     <link href="/static/css/dist/style.css" rel="stylesheet">
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
   </head>
   <body class="bg-gray-100 text-gray-800">
-    <header class="bg-white shadow-md">
+    <header class="bg-blue-700 shadow-md text-white">
       <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-        <h1 class="text-2xl font-bold">Lojagtec</h1>
-        <nav>
+        <h1 class="text-2xl font-bold">Loja G-TEC</h1>
+        <nav class="flex items-center">
           <a href="#" class="px-4">Home</a>
-          <a href="#" class="px-4">Products</a>
-          <a href="#" class="px-4">Services</a>
-          <a href="#" class="px-4">Contact</a>
+          <a href="#" class="px-4">Produtos</a>
+          <a href="#" class="px-4">Serviços</a>
+          <a href="#" class="px-4">Contato</a>
+          <div class="relative ml-4">
+            <svg id="cart-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </div>
         </nav>
       </div>
     </header>
+    <div class="flex justify-center items-center mx-auto gap-2 text-xl py-4" id="product-type-selection">
+      <button type="button" 
+        hx-get="/products/all" 
+        hx-target="#products-container" 
+        hx-swap="innerHTML" 
+        hx-indicator="#loading"
+        class="px-4 py-2 rounded hover:bg-blue-100 transition-colors duration-200 product-filter-btn">
+        Todos
+      </button>
+      <div class="w-0.5 h-6 bg-black"></div>
+      <button type="button" 
+        hx-get="/products/bebedouros" 
+        hx-target="#products-container" 
+        hx-swap="innerHTML" 
+        hx-indicator="#loading"
+        class="px-4 py-2 rounded hover:bg-blue-100 transition-colors duration-200 product-filter-btn">
+        Bebedouros
+      </button>
+      <div class="w-0.5 h-6 bg-black"></div>
+      <button type="button" 
+        hx-get="/products/purificadores" 
+        hx-target="#products-container" 
+        hx-swap="innerHTML" 
+        hx-indicator="#loading"
+        class="px-4 py-2 rounded hover:bg-blue-100 transition-colors duration-200 product-filter-btn">
+        Purificadores
+      </button>
+      <div class="w-0.5 h-6 bg-black"></div>
+      <button type="button" 
+        hx-get="/products/refis" 
+        hx-target="#products-container" 
+        hx-swap="innerHTML" 
+        hx-indicator="#loading"
+        class="px-4 py-2 rounded hover:bg-blue-100 transition-colors duration-200 product-filter-btn">
+        Refis
+      </button>
+      <div class="w-0.5 h-6 bg-black"></div>
+      <button type="button" 
+        hx-get="/products/pecas" 
+        hx-target="#products-container" 
+        hx-swap="innerHTML" 
+        hx-indicator="#loading"
+        class="px-4 py-2 rounded hover:bg-blue-100 transition-colors duration-200 product-filter-btn">
+        Peças
+      </button>
+    </div>
     <main class="container mx-auto px-4 py-8">
-      <h2 class="text-3xl font-bold mb-4">Our Products</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        <!-- Product Card -->
-        <div class="bg-white rounded-lg shadow-md overflow-hidden">
-          <img src="/static/images/filter.jpg" alt="Water Filter" class="w-full h-64 object-cover">
-          <div class="p-4">
-            <h3 class="text-xl font-bold mb-2">Water Filter</h3>
-            <p class="text-gray-600 mb-4">$99.99</p>
-            <button class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Add to Cart</button>
-          </div>
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-3xl font-bold">Nossos Produtos</h2>
+        <div id="loading" class="htmx-indicator">
+          <svg class="animate-spin h-6 w-6 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
         </div>
-        <!-- Product Card -->
-        <div class="bg-white rounded-lg shadow-md overflow-hidden">
-          <img src="/static/images/fountain.jpg" alt="Water Fountain" class="w-full h-64 object-cover">
+      </div>
+      <div id="products-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <!-- Initial products loaded here -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden product-card" data-name="Purificador IBBL Mio Branco" data-price="699.99">
+          <img src="/static/images/purificador.jpg" alt="Purificador IBBL Mio Branco" class="w-full h-64 object-cover">
           <div class="p-4">
-            <h3 class="text-xl font-bold mb-2">Water Fountain</h3>
-            <p class="text-gray-600 mb-4">$199.99</p>
-            <button class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Add to Cart</button>
-          </div>
-        </div>
-        <!-- Product Card -->
-        <div class="bg-white rounded-lg shadow-md overflow-hidden">
-          <img src="/static/images/maintenance.jpg" alt="Maintenance Service" class="w-full h-64 object-cover">
-          <div class="p-4">
-            <h3 class="text-xl font-bold mb-2">Maintenance Service</h3>
-            <p class="text-gray-600 mb-4">$49.99</p>
-            <button class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Add to Cart</button>
+            <h3 class="text-xl font-bold mb-2">Purificador IBBL Mio Branco</h3>
+            <p class="text-gray-600 mb-4">R$ 699.99</p>
+            <button class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 add-to-cart">Adicionar ao Carrinho</button>
           </div>
         </div>
       </div>
     </main>
+
+    <!-- Cart Modal -->
+    <div id="cart-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50 transition-opacity duration-300">
+      <div id="cart-modal-content" class="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 transform transition-all duration-300 scale-95 opacity-0">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-t-2xl p-6">
+          <div class="flex justify-between items-center">
+            <div>
+              <h2 class="text-2xl font-bold text-white">Carrinho</h2>
+              <p class="text-blue-100 text-sm mt-1" id="cart-count">0 items</p>
+            </div>
+            <button id="close-cart" class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition-colors duration-200">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Cart Items -->
+        <div id="cart-items" class="max-h-96 overflow-y-auto p-6 space-y-4">
+          <!-- Cart items will be injected here -->
+        </div>
+
+        <!-- Footer -->
+        <div class="border-t border-gray-200 p-6 bg-gray-50 rounded-b-2xl">
+          <div class="flex justify-between items-center mb-4">
+            <div>
+              <p class="text-sm text-gray-600">Total</p>
+              <h3 class="text-2xl font-bold text-gray-900">R$ <span id="cart-total">0.00</span></h3>
+            </div>
+            <button id="clear-cart" class="text-red-500 hover:text-red-700 text-sm font-medium transition-colors duration-200">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Esvaziar Carrinho
+            </button>
+          </div>
+          <a href="/checkout.html" class="block">
+            <button class="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-lg hover:from-green-600 hover:to-green-700 w-full font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 cursor-pointer">
+              Prosseguir para Pagamento
+            </button>
+          </a>
+        </div>
+      </div>
+    </div>
+
     <footer class="bg-gray-800 text-white py-4 mt-8">
       <div class="container mx-auto px-4 text-center">
-        <p>&copy; 2025 Lojagtec. All rights reserved.</p>
+        <p>&copy; 2025 Lojagtec. Todos os direitos reservados.</p>
       </div>
     </footer>
+    <script type="module" src="/static/js/cart.js"></script>
   </body>
 </html>
