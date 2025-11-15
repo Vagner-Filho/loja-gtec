@@ -7,7 +7,7 @@ This guide will help you set up and use the admin panel for Loja G-TEC.
 The admin panel allows you to:
 - Authenticate as an administrator
 - View all products in the database
-- Add new products
+- Add new products with image uploads
 - Edit existing products
 - Delete products
 
@@ -83,24 +83,35 @@ Run the server:
    - **Product Name**: e.g., "Purificador IBBL Mio Branco"
    - **Price**: e.g., 699.99
    - **Category**: Select from dropdown (bebedouros, purificadores, refis, pecas)
-   - **Image URL**: e.g., "/static/images/purificador.jpg"
-2. Click "Add Product"
-3. The product will appear in the list below
+   - **Product Image**: Click to select an image file from your computer
+2. You'll see a preview of the selected image
+3. Click "Add Product"
+4. The image will be uploaded and the product will be created
 
 #### Editing a Product
 
 1. Find the product in the list
 2. Click the "Edit" button
-3. Modify the fields in the modal
-4. Click "Update Product"
-5. The changes will be saved to the database
+3. The current product image is displayed
+4. Modify any fields you want to change
+5. Optionally upload a new image (leave empty to keep the current image)
+6. Click "Update Product"
+7. The changes will be saved to the database
 
 #### Deleting a Product
 
 1. Find the product in the list
 2. Click the "Delete" button
 3. Confirm the deletion
-4. The product will be removed from the database
+4. The product and its uploaded image will be removed
+
+### Image Upload Details
+
+- **Supported Formats**: All common image formats (JPEG, PNG, GIF, WebP, etc.)
+- **Maximum File Size**: 5MB
+- **Storage Location**: Uploaded images are stored in `/web/static/images/uploads/`
+- **Filename Generation**: Random unique filenames are generated to avoid conflicts
+- **Image Cleanup**: When a product is deleted or its image is replaced, the old image file is automatically removed
 
 ### Logging Out
 
@@ -113,21 +124,25 @@ Click the "Logout" button in the header to end your session.
 - **HTTP-Only Cookies**: Session cookies cannot be accessed via JavaScript
 - **Authentication Middleware**: Admin routes require authentication
 - **Session Expiration**: Sessions expire after 24 hours
+- **File Upload Validation**: 
+  - File size limits (5MB max)
+  - File type validation (images only)
+  - Secure filename generation
 
 ## API Endpoints
 
 The following API endpoints are available (all require authentication):
 
-- `GET /api/admin/products` - Get all products
-- `POST /api/admin/products` - Create a new product
-- `PUT /api/admin/products/{id}` - Update a product
-- `DELETE /api/admin/products/{id}` - Delete a product
+- `GET /api/admin/products` - Get all products (JSON response)
+- `POST /api/admin/products` - Create a new product (multipart/form-data with file upload)
+- `PUT /api/admin/products/{id}` - Update a product (multipart/form-data, image optional)
+- `DELETE /api/admin/products/{id}` - Delete a product (also removes uploaded image)
 
 ## File Structure
 
 ```
 lojagtec/
-├── cmd/server/main.go                    # Main server with admin routes
+├── cmd/server/main.go                    # Main server with admin routes & file upload
 ├── internal/
 │   ├── admin/auth.go                     # Authentication & session management
 │   ├── products/products.go              # Product CRUD operations
@@ -135,10 +150,12 @@ lojagtec/
 ├── web/
 │   ├── templates/
 │   │   ├── admin-login.html              # Admin login page
-│   │   └── admin-dashboard.html          # Admin dashboard
+│   │   └── admin-dashboard.html          # Admin dashboard with file upload
 │   └── static/
-│       └── js/
-│           └── admin.js                  # Admin panel JavaScript
+│       ├── js/
+│       │   └── admin.js                  # Admin panel JavaScript with FormData
+│       └── images/
+│           └── uploads/                  # Directory for uploaded product images
 └── scripts/
     └── migrations/
         └── 001_create_admin_and_products.sql  # Database schema
@@ -161,9 +178,20 @@ Verify that:
 2. The admin user exists in the database
 3. You're using the correct credentials
 
-### Session expires immediately
+### Image upload fails
 
-Check that the system time is correct, as sessions use timestamps for expiration.
+Check that:
+1. The `/web/static/images/uploads/` directory exists and is writable
+2. The image file is under 5MB
+3. The file is a valid image format
+4. You have sufficient disk space
+
+### Uploaded images not displaying
+
+Verify that:
+1. The `/static/` route is properly serving files
+2. The uploads directory has correct permissions
+3. The image path in the database starts with `/static/images/uploads/`
 
 ## Production Considerations
 
@@ -176,6 +204,25 @@ Before deploying to production:
 5. **Add CSRF protection** for forms
 6. **Use a production-grade session store** (currently in-memory)
 7. **Set up proper logging** for security events
+8. **Configure proper file upload limits** based on your needs
+9. **Implement image optimization** (resize, compress) for uploaded images
+10. **Set up backup strategy** for uploaded images
+11. **Consider using a CDN** for serving static assets and uploaded images
+
+## Image Upload Best Practices
+
+### For Development:
+- The current implementation stores images in `/web/static/images/uploads/`
+- Images are served directly by the Go server
+
+### For Production:
+Consider these improvements:
+1. **Image Optimization**: Resize and compress images on upload
+2. **Cloud Storage**: Use S3, Google Cloud Storage, or similar for uploaded images
+3. **CDN**: Serve images through a CDN for better performance
+4. **Virus Scanning**: Scan uploaded files for malware
+5. **Backup**: Regular backups of uploaded images
+6. **Cleanup Jobs**: Remove orphaned images that are no longer referenced
 
 ## Adding More Admin Users
 

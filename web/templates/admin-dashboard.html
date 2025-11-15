@@ -14,7 +14,7 @@
       <div class="container mx-auto px-4 py-4 flex justify-between items-center">
         <h1 class="text-2xl font-bold">Admin Dashboard - G-TEC</h1>
         <nav class="flex items-center gap-4">
-          <a href="/" class="px-4 hover:text-blue-200 transition-colors">View Store</a>
+          <a href="/" class="px-4 hover:text-blue-200 transition-colors">Ver Loja</a>
           <a href="/admin/logout" class="px-4 py-2 bg-red-500 hover:bg-red-600 rounded transition-colors">Logout</a>
         </nav>
       </div>
@@ -23,11 +23,11 @@
     <main class="container mx-auto px-4 py-8">
       <!-- Add Product Section -->
       <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h2 class="text-2xl font-bold mb-4 text-gray-800">Add New Product</h2>
-        
-        <form id="add-product-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <h2 class="text-2xl font-bold mb-4 text-gray-800">Adicionar Produto</h2>
+
+        <form id="add-product-form" class="grid grid-cols-1 md:grid-cols-2 gap-4" enctype="multipart/form-data">
           <div>
-            <label for="name" class="block text-sm font-medium text-gray-700 mb-2">Product Name</label>
+            <label for="name" class="block text-sm font-medium text-gray-700 mb-2">Nome do Produto</label>
             <input 
               type="text" 
               id="name" 
@@ -39,7 +39,7 @@
           </div>
 
           <div>
-            <label for="price" class="block text-sm font-medium text-gray-700 mb-2">Price (R$)</label>
+            <label for="price" class="block text-sm font-medium text-gray-700 mb-2">Preço (R$)</label>
             <input 
               type="number" 
               id="price" 
@@ -52,7 +52,7 @@
           </div>
 
           <div>
-            <label for="category" class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+            <label for="category" class="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
             <select 
               id="category" 
               name="category"
@@ -68,15 +68,22 @@
           </div>
 
           <div>
-            <label for="image" class="block text-sm font-medium text-gray-700 mb-2">Image URL</label>
+            <label for="image" class="block text-sm font-medium text-gray-700 mb-2">Imagem do Produto</label>
             <input 
-              type="text" 
+              type="file" 
               id="image" 
               name="image"
+              accept="image/*"
               required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              placeholder="/static/images/product.jpg"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
             >
+          </div>
+
+          <div class="md:col-span-2">
+            <div id="add-image-preview" class="hidden mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Prévia da Imagem</label>
+              <img id="add-preview-img" src="" alt="Preview" class="w-32 h-32 object-contain border border-gray-300 rounded">
+            </div>
           </div>
 
           <div class="md:col-span-2">
@@ -84,7 +91,7 @@
               type="submit"
               class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-semibold shadow-md hover:shadow-lg"
             >
-              Add Product
+              Adicionar Produto
             </button>
           </div>
         </form>
@@ -94,8 +101,8 @@
 
       <!-- Products List -->
       <div class="bg-white rounded-lg shadow-md p-6">
-        <h2 class="text-2xl font-bold mb-4 text-gray-800">Manage Products</h2>
-        
+        <h2 class="text-2xl font-bold mb-4 text-gray-800">Gerenciar Produtos</h2>
+
         <div id="products-list" class="space-y-4">
           <!-- Products will be loaded here -->
         </div>
@@ -104,9 +111,9 @@
 
     <!-- Edit Modal -->
     <div id="edit-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
-      <div class="bg-white rounded-lg shadow-2xl max-w-2xl w-full mx-4 p-6">
+      <div class="bg-white rounded-lg shadow-2xl max-w-2xl w-full mx-4 p-6 max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center mb-4">
-          <h3 class="text-2xl font-bold text-gray-800">Edit Product</h3>
+          <h3 class="text-2xl font-bold text-gray-800">Editar Produto</h3>
           <button id="close-modal" class="text-gray-500 hover:text-gray-700">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -114,11 +121,12 @@
           </button>
         </div>
 
-        <form id="edit-product-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form id="edit-product-form" class="grid grid-cols-1 md:grid-cols-2 gap-4" enctype="multipart/form-data">
           <input type="hidden" id="edit-id" name="id">
-          
+          <input type="hidden" id="edit-current-image" name="current_image">
+
           <div>
-            <label for="edit-name" class="block text-sm font-medium text-gray-700 mb-2">Product Name</label>
+            <label for="edit-name" class="block text-sm font-medium text-gray-700 mb-2">Nome do Produto</label>
             <input 
               type="text" 
               id="edit-name" 
@@ -129,7 +137,7 @@
           </div>
 
           <div>
-            <label for="edit-price" class="block text-sm font-medium text-gray-700 mb-2">Price (R$)</label>
+            <label for="edit-price" class="block text-sm font-medium text-gray-700 mb-2">Preço (R$)</label>
             <input 
               type="number" 
               id="edit-price" 
@@ -141,7 +149,7 @@
           </div>
 
           <div>
-            <label for="edit-category" class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+            <label for="edit-category" class="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
             <select 
               id="edit-category" 
               name="category"
@@ -156,14 +164,23 @@
           </div>
 
           <div>
-            <label for="edit-image" class="block text-sm font-medium text-gray-700 mb-2">Image URL</label>
+            <label for="edit-image" class="block text-sm font-medium text-gray-700 mb-2">Imagem do Produto (opcional - deixe como está para manter o atual)</label>
             <input 
-              type="text" 
+              type="file" 
               id="edit-image" 
               name="image"
-              required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              accept="image/*"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
             >
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Imagem Atual</label>
+            <img id="edit-current-preview" src="" alt="Current product image" class="w-32 h-32 object-contain border border-gray-300 rounded mb-2">
+            <div id="edit-image-preview" class="hidden">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Prévia Nova Imagem</label>
+              <img id="edit-preview-img" src="" alt="Preview" class="w-32 h-32 object-contain border border-gray-300 rounded">
+            </div>
           </div>
 
           <div class="md:col-span-2 flex gap-4">
@@ -171,14 +188,14 @@
               type="submit"
               class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold shadow-md hover:shadow-lg"
             >
-              Update Product
+              Atualizar Produto
             </button>
             <button 
               type="button"
               id="cancel-edit"
               class="bg-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-400 transition-colors font-semibold"
             >
-              Cancel
+              Cancelar
             </button>
           </div>
         </form>

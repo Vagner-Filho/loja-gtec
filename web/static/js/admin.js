@@ -3,6 +3,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   loadProducts();
   setupEventListeners();
+  setupImagePreviews();
 });
 
 // Load all products
@@ -89,35 +90,65 @@ function setupEventListeners() {
   });
 }
 
+// Setup image preview functionality
+function setupImagePreviews() {
+  // Add form image preview
+  const addImageInput = document.getElementById('image');
+  addImageInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        document.getElementById('add-preview-img').src = e.target.result;
+        document.getElementById('add-image-preview').classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    } else {
+      document.getElementById('add-image-preview').classList.add('hidden');
+    }
+  });
+
+  // Edit form image preview
+  const editImageInput = document.getElementById('edit-image');
+  editImageInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        document.getElementById('edit-preview-img').src = e.target.result;
+        document.getElementById('edit-image-preview').classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    } else {
+      document.getElementById('edit-image-preview').classList.add('hidden');
+    }
+  });
+}
+
 // Handle add product
 async function handleAddProduct(e) {
   e.preventDefault();
   
   const formData = new FormData(e.target);
-  const product = {
-    name: formData.get('name'),
-    price: parseFloat(formData.get('price')),
-    image: formData.get('image'),
-    category: formData.get('category')
-  };
 
   try {
     const response = await fetch('/api/admin/products', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(product)
+      body: formData // Send as multipart/form-data
     });
 
-    if (!response.ok) throw new Error('Failed to add product');
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Failed to add product');
+    }
 
     showMessage('add-message', 'Product added successfully!', 'success');
     e.target.reset();
+    document.getElementById('add-image-preview').classList.add('hidden');
     loadProducts();
   } catch (error) {
     console.error('Error adding product:', error);
-    showMessage('add-message', 'Failed to add product', 'error');
+    showMessage('add-message', `Failed to add product: ${error.message}`, 'error');
   }
 }
 
@@ -136,8 +167,15 @@ async function editProduct(id) {
     document.getElementById('edit-id').value = product.id;
     document.getElementById('edit-name').value = product.name;
     document.getElementById('edit-price').value = product.price;
-    document.getElementById('edit-image').value = product.image;
     document.getElementById('edit-category').value = product.category;
+    document.getElementById('edit-current-image').value = product.image;
+    
+    // Show current image
+    document.getElementById('edit-current-preview').src = product.image;
+    
+    // Reset file input and hide new preview
+    document.getElementById('edit-image').value = '';
+    document.getElementById('edit-image-preview').classList.add('hidden');
 
     // Show modal
     openModal();
@@ -153,23 +191,17 @@ async function handleEditProduct(e) {
   
   const formData = new FormData(e.target);
   const id = formData.get('id');
-  const product = {
-    name: formData.get('name'),
-    price: parseFloat(formData.get('price')),
-    image: formData.get('image'),
-    category: formData.get('category')
-  };
 
   try {
     const response = await fetch(`/api/admin/products/${id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(product)
+      body: formData // Send as multipart/form-data
     });
 
-    if (!response.ok) throw new Error('Failed to update product');
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Failed to update product');
+    }
 
     showMessage('edit-message', 'Product updated successfully!', 'success');
     setTimeout(() => {
@@ -178,7 +210,7 @@ async function handleEditProduct(e) {
     }, 1000);
   } catch (error) {
     console.error('Error updating product:', error);
-    showMessage('edit-message', 'Failed to update product', 'error');
+    showMessage('edit-message', `Failed to update product: ${error.message}`, 'error');
   }
 }
 
@@ -229,6 +261,7 @@ function closeModal() {
   modal.classList.add('hidden');
   document.body.style.overflow = 'auto';
   document.getElementById('edit-message').classList.add('hidden');
+  document.getElementById('edit-image-preview').classList.add('hidden');
 }
 
 // Make functions globally available
