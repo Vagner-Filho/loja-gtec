@@ -1,29 +1,141 @@
 package products
 
+import (
+	"database/sql"
+	"fmt"
+)
+
 type Product struct {
-	Name     string
-	Price    float64
-	Image    string
-	Category string
+	ID       int     `json:"id"`
+	Name     string  `json:"name"`
+	Price    float64 `json:"price"`
+	Image    string  `json:"image"`
+	Category string  `json:"category"`
 }
 
-var AllProducts = []Product{
-	{Name: "Purificador IBBL Mio Branco", Price: 699.99, Image: "/static/images/purificador.jpg", Category: "purificadores"},
-	{Name: "Bebedouro IBBL Compact", Price: 499.99, Image: "/static/images/bebedouro.jpg", Category: "bebedouros"},
-	{Name: "Válvula Redutora de Pressão 1/4", Price: 45.99, Image: "/static/images/peca.jpg", Category: "pecas"},
-	{Name: "Refil Gioviale Rpc-01 Lorenzetti", Price: 89.99, Image: "/static/images/refil.jpg", Category: "refis"},
+var db *sql.DB
+
+// SetDatabase sets the database connection for the products package
+func SetDatabase(database *sql.DB) {
+	db = database
 }
 
-func GetProductsByCategory(category string) []Product {
-	if category == "" {
-		return AllProducts
+// GetAllProducts retrieves all products from the database
+func GetAllProducts() ([]Product, error) {
+	rows, err := db.Query("SELECT id, name, price, image, category FROM products ORDER BY id DESC")
+	if err != nil {
+		return nil, err
 	}
+	defer rows.Close()
 
-	var filtered []Product
-	for _, p := range AllProducts {
-		if p.Category == category {
-			filtered = append(filtered, p)
+	var products []Product
+	for rows.Next() {
+		var p Product
+		if err := rows.Scan(&p.ID, &p.Name, &p.Price, &p.Image, &p.Category); err != nil {
+			return nil, err
 		}
+		products = append(products, p)
 	}
-	return filtered
+
+	return products, nil
+}
+
+// GetProductsByCategory retrieves products by category from the database
+func GetProductsByCategory(category string) ([]Product, error) {
+	var rows *sql.Rows
+	var err error
+
+	if category == "" {
+		return GetAllProducts()
+	}
+
+	rows, err = db.Query("SELECT id, name, price, image, category FROM products WHERE category = $1 ORDER BY id DESC", category)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var products []Product
+	for rows.Next() {
+		var p Product
+		if err := rows.Scan(&p.ID, &p.Name, &p.Price, &p.Image, &p.Category); err != nil {
+			return nil, err
+		}
+		products = append(products, p)
+	}
+
+	return products, nil
+}
+
+// GetProductByID retrieves a single product by ID
+func GetProductByID(id int) (*Product, error) {
+	var p Product
+	err := db.QueryRow("SELECT id, name, price, image, category FROM products WHERE id = $1", id).
+		Scan(&p.ID, &p.Name, &p.Price, &p.Image, &p.Category)
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+// CreateProduct creates a new product in the database
+func CreateProduct(name string, price float64, image, category string) (*Product, error) {
+	var id int
+	err := db.QueryRow(
+		"INSERT INTO products (name, price, image, category) VALUES ($1, $2, $3, $4) RETURNING id",
+		name, price, image, category,
+	).Scan(&id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &Product{
+		ID:       id,
+		Name:     name,
+		Price:    price,
+		Image:    image,
+		Category: category,
+	}, nil
+}
+
+// UpdateProduct updates an existing product in the database
+func UpdateProduct(id int, name string, price float64, image, category string) error {
+	result, err := db.Exec(
+		"UPDATE products SET name = $1, price = $2, image = $3, category = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5",
+		name, price, image, category, id,
+	)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("product with id %d not found", id)
+	}
+
+	return nil
+}
+
+// DeleteProduct deletes a product from the database
+func DeleteProduct(id int) error {
+	result, err := db.Exec("DELETE FROM products WHERE id = $1", id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("product with id %d not found", id)
+	}
+
+	return nil
 }

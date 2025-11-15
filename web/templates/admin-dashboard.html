@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Loja G-TEC</title>
+    <link href="/static/images/favicon.png" type="image/x-icon" rel="icon">
+    <link href="/static/css/dist/style.css" rel="stylesheet">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  </head>
+  <body class="bg-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-blue-700 shadow-md text-white">
+      <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+        <h1 class="text-2xl font-bold">Admin Dashboard - G-TEC</h1>
+        <nav class="flex items-center gap-4">
+          <a href="/" class="px-4 hover:text-blue-200 transition-colors">View Store</a>
+          <a href="/admin/logout" class="px-4 py-2 bg-red-500 hover:bg-red-600 rounded transition-colors">Logout</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+      <!-- Add Product Section -->
+      <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 class="text-2xl font-bold mb-4 text-gray-800">Add New Product</h2>
+        
+        <form id="add-product-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label for="name" class="block text-sm font-medium text-gray-700 mb-2">Product Name</label>
+            <input 
+              type="text" 
+              id="name" 
+              name="name" 
+              required
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              placeholder="e.g., Purificador IBBL Mio Branco"
+            >
+          </div>
+
+          <div>
+            <label for="price" class="block text-sm font-medium text-gray-700 mb-2">Price (R$)</label>
+            <input 
+              type="number" 
+              id="price" 
+              name="price" 
+              step="0.01"
+              required
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              placeholder="0.00"
+            >
+          </div>
+
+          <div>
+            <label for="category" class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+            <select 
+              id="category" 
+              name="category"
+              required
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            >
+              <option value="">Select a category</option>
+              <option value="bebedouros">Bebedouros</option>
+              <option value="purificadores">Purificadores</option>
+              <option value="refis">Refis</option>
+              <option value="pecas">Peças</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="image" class="block text-sm font-medium text-gray-700 mb-2">Image URL</label>
+            <input 
+              type="text" 
+              id="image" 
+              name="image"
+              required
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              placeholder="/static/images/product.jpg"
+            >
+          </div>
+
+          <div class="md:col-span-2">
+            <button 
+              type="submit"
+              class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-semibold shadow-md hover:shadow-lg"
+            >
+              Add Product
+            </button>
+          </div>
+        </form>
+
+        <div id="add-message" class="mt-4 hidden"></div>
+      </div>
+
+      <!-- Products List -->
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-2xl font-bold mb-4 text-gray-800">Manage Products</h2>
+        
+        <div id="products-list" class="space-y-4">
+          <!-- Products will be loaded here -->
+        </div>
+      </div>
+    </main>
+
+    <!-- Edit Modal -->
+    <div id="edit-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+      <div class="bg-white rounded-lg shadow-2xl max-w-2xl w-full mx-4 p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-2xl font-bold text-gray-800">Edit Product</h3>
+          <button id="close-modal" class="text-gray-500 hover:text-gray-700">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <form id="edit-product-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <input type="hidden" id="edit-id" name="id">
+          
+          <div>
+            <label for="edit-name" class="block text-sm font-medium text-gray-700 mb-2">Product Name</label>
+            <input 
+              type="text" 
+              id="edit-name" 
+              name="name" 
+              required
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            >
+          </div>
+
+          <div>
+            <label for="edit-price" class="block text-sm font-medium text-gray-700 mb-2">Price (R$)</label>
+            <input 
+              type="number" 
+              id="edit-price" 
+              name="price" 
+              step="0.01"
+              required
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            >
+          </div>
+
+          <div>
+            <label for="edit-category" class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+            <select 
+              id="edit-category" 
+              name="category"
+              required
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            >
+              <option value="bebedouros">Bebedouros</option>
+              <option value="purificadores">Purificadores</option>
+              <option value="refis">Refis</option>
+              <option value="pecas">Peças</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="edit-image" class="block text-sm font-medium text-gray-700 mb-2">Image URL</label>
+            <input 
+              type="text" 
+              id="edit-image" 
+              name="image"
+              required
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            >
+          </div>
+
+          <div class="md:col-span-2 flex gap-4">
+            <button 
+              type="submit"
+              class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold shadow-md hover:shadow-lg"
+            >
+              Update Product
+            </button>
+            <button 
+              type="button"
+              id="cancel-edit"
+              class="bg-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-400 transition-colors font-semibold"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+
+        <div id="edit-message" class="mt-4 hidden"></div>
+      </div>
+    </div>
+
+    <script src="/static/js/admin.js"></script>
+  </body>
+</html>
