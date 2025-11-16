@@ -54,7 +54,7 @@ func main() {
 		tmpl.Execute(w, nil)
 	})
 
-	http.HandleFunc("/checkout.html", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/checkout", func(w http.ResponseWriter, r *http.Request) {
 		tmpl, err := template.ParseFiles("web/templates/checkout.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
