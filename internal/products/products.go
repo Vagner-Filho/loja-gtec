@@ -6,11 +6,12 @@ import (
 )
 
 type Product struct {
-	ID       int     `json:"id"`
-	Name     string  `json:"name"`
-	Price    float64 `json:"price"`
-	Image    string  `json:"image"`
-	Category string  `json:"category"`
+	ID          int     `json:"id"`
+	Name        string  `json:"name"`
+	Price       float64 `json:"price"`
+	Image       string  `json:"image"`
+	Category    string  `json:"category"`
+	IsAvailable bool    `json:"isAvailable"`
 }
 
 var db *sql.DB
@@ -79,11 +80,11 @@ func GetProductByID(id int) (*Product, error) {
 }
 
 // CreateProduct creates a new product in the database
-func CreateProduct(name string, price float64, image, category string) (*Product, error) {
+func CreateProduct(name string, price float64, image, category string, isAvailable bool) (*Product, error) {
 	var id int
 	err := db.QueryRow(
-		"INSERT INTO products (name, price, image, category) VALUES ($1, $2, $3, $4) RETURNING id",
-		name, price, image, category,
+		"INSERT INTO products (name, price, image, category, is_available) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+		name, price, image, category, isAvailable,
 	).Scan(&id)
 
 	if err != nil {

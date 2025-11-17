@@ -1,18 +1,19 @@
 -- Create admin_users table
 CREATE TABLE IF NOT EXISTS admin_users (
     id SERIAL PRIMARY KEY,
-    username VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create products table
 CREATE TABLE IF NOT EXISTS products (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
+    name TEXT NOT NULL,
     price DECIMAL(10, 2) NOT NULL,
-    image VARCHAR(500) NOT NULL,
-    category VARCHAR(100) NOT NULL,
+    image TEXT NOT NULL,
+    category TEXT NOT NULL,
+    is_available BOOL NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

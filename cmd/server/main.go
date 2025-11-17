@@ -213,6 +213,7 @@ func main() {
 			name := r.FormValue("name")
 			priceStr := r.FormValue("price")
 			category := r.FormValue("category")
+			isAvailableStr := r.FormValue("is_available")
 
 			if name == "" || priceStr == "" || category == "" {
 				http.Error(w, "Missing required fields", http.StatusBadRequest)
@@ -232,8 +233,14 @@ func main() {
 				return
 			}
 
+			isAvailable, err := strconv.ParseBool(isAvailableStr)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Falha ao adicionar produto: %v", err), http.StatusBadRequest)
+				return
+			}
+
 			// Create product
-			product, err := products.CreateProduct(name, price, imagePath, category)
+			product, err := products.CreateProduct(name, price, imagePath, category, isAvailable)
 			if err != nil {
 				// Clean up uploaded file if product creation fails
 				os.Remove(filepath.Join(uploadPath, filepath.Base(imagePath)))
