@@ -6,6 +6,7 @@ To apply the migrations to your database, run:
 
 ```bash
 psql -U lojagtec -d lojagtec -f scripts/migrations/001_create_admin_and_products.sql
+psql -U lojagtec -d lojagtec -f scripts/migrations/002_update_is_available.sql
 ```
 
 Or from the scripts directory:
@@ -13,6 +14,7 @@ Or from the scripts directory:
 ```bash
 cd scripts/migrations
 psql -U lojagtec -d lojagtec -f 001_create_admin_and_products.sql
+psql -U lojagtec -d lojagtec -f 002_update_is_available.sql
 ```
 
 ## Default Admin Credentials

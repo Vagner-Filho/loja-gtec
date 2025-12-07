@@ -111,10 +111,46 @@
             </div>
           </div>
 
-          <!-- Payment Information -->
+          <!-- Payment Method Selection -->
           <div class="bg-white rounded-2xl shadow-md p-6">
-            <h2 class="text-2xl font-bold mb-6">Payment Information</h2>
-            <div class="space-y-4">
+            <h2 class="text-2xl font-bold mb-6">Payment Method</h2>
+            
+            <!-- Payment Method Options -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <label class="payment-option cursor-pointer">
+                <input type="radio" name="paymentMethod" value="credit_card" class="hidden payment-radio" checked>
+                <div class="border-2 border-gray-200 rounded-lg p-4 text-center hover:border-blue-500 transition-colors payment-option-card">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto mb-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                  <span class="font-medium">Credit Card</span>
+                </div>
+              </label>
+
+              <label class="payment-option cursor-pointer">
+                <input type="radio" name="paymentMethod" value="boleto" class="hidden payment-radio">
+                <div class="border-2 border-gray-200 rounded-lg p-4 text-center hover:border-blue-500 transition-colors payment-option-card">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto mb-2 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span class="font-medium">Boleto</span>
+                </div>
+              </label>
+              
+              <label class="payment-option cursor-pointer">
+                <input type="radio" name="paymentMethod" value="pix" class="hidden payment-radio">
+                <div class="border-2 border-gray-200 rounded-lg p-4 text-center hover:border-blue-500 transition-colors payment-option-card">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto mb-2 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                  </svg>
+                  <span class="font-medium">PIX</span>
+                </div>
+              </label>
+            </div>
+
+            <!-- Credit Card Form -->
+            <div id="credit_card-form" class="payment-form space-y-4">
+              <h3 class="text-lg font-semibold mb-4">Credit Card Information</h3>
               <div>
                 <label for="cardName" class="block text-sm font-medium text-gray-700 mb-2">Name on Card</label>
                 <input type="text" id="cardName" name="cardName" required
@@ -138,6 +174,78 @@
                   <input type="text" id="cvv" name="cvv" required maxlength="4" placeholder="123"
                     class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
                 </div>
+              </div>
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p class="text-sm text-blue-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  Secure payment powered by SSL encryption
+                </p>
+              </div>
+            </div>
+
+            <!-- Boleto Form -->
+            <div id="boleto-form" class="payment-form hidden space-y-4">
+              <h3 class="text-lg font-semibold mb-4">Boleto Information</h3>
+              <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div class="flex items-start">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600 mt-0.5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div>
+                    <p class="text-sm font-medium text-green-800 mb-1">How it works:</p>
+                    <ul class="text-sm text-green-700 space-y-1">
+                      <li>• After confirming your order, we'll generate a boleto</li>
+                      <li>• You'll receive the boleto via email</li>
+                      <li>• Pay at any bank, lottery, or online banking</li>
+                      <li>• Your order will be processed after payment confirmation</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label for="cpf" class="block text-sm font-medium text-gray-700 mb-2">CPF/CNPJ</label>
+                <input type="text" id="cpf" name="cpf" required
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  placeholder="000.000.000-00">
+              </div>
+              <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p class="text-sm text-yellow-700">
+                  <strong>Attention:</strong> Boleto payment takes up to 3 business days to be processed.
+                </p>
+              </div>
+            </div>
+
+            <!-- PIX Form -->
+            <div id="pix-form" class="payment-form hidden space-y-4">
+              <h3 class="text-lg font-semibold mb-4">PIX Information</h3>
+              <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <div class="flex items-start">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-600 mt-0.5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div>
+                    <p class="text-sm font-medium text-purple-800 mb-1">How it works:</p>
+                    <ul class="text-sm text-purple-700 space-y-1">
+                      <li>• After confirming your order, we'll generate a PIX QR code</li>
+                      <li>• You'll receive the QR code via email and on the confirmation page</li>
+                      <li>• Scan the code with any banking app to pay</li>
+                      <li>• Your order will be processed immediately after payment</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label for="pixKey" class="block text-sm font-medium text-gray-700 mb-2">PIX Key (CPF/CNPJ/Phone/Email)</label>
+                <input type="text" id="pixKey" name="pixKey" required
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  placeholder="your@email.com or 000.000.000-00">
+              </div>
+              <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                <p class="text-sm text-green-700">
+                  <strong>Benefit:</strong> PIX payment is processed instantly, so your order ships faster!
+                </p>
               </div>
             </div>
           </div>

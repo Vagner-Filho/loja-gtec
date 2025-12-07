@@ -194,13 +194,48 @@ func main() {
 	http.HandleFunc("/api/admin/products", admin.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			w.Header().Set("Content-Type", "application/json")
-			prods, err := products.GetAllProducts()
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
+			// Check if this is an HTMX request for HTML fragment
+			if r.Header.Get("HX-Request") == "true" {
+				// Create a simple function map for template
+				funcMap := template.FuncMap{
+					"formatCategory": func(category string) string {
+						categories := map[string]string{
+							"bebedouros":    "Bebedouros",
+							"purificadores": "Purificadores",
+							"refis":         "Refis",
+							"pecas":         "Peças",
+						}
+						if val, ok := categories[category]; ok {
+							return val
+						}
+						return category
+					},
+				}
+
+				tmpl, err := template.New("admin-product-list.html").Funcs(funcMap).ParseFiles("web/templates/admin-product-list.html")
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				prods, err := products.GetAllProducts()
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				w.Header().Set("Content-Type", "text/html")
+				tmpl.Execute(w, prods)
+			} else {
+				// Original JSON response for non-HTMX requests
+				w.Header().Set("Content-Type", "application/json")
+				prods, err := products.GetAllProducts()
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				json.NewEncoder(w).Encode(prods)
 			}
-			json.NewEncoder(w).Encode(prods)
 
 		case http.MethodPost:
 			// Parse multipart form (max 5MB)
@@ -233,24 +268,54 @@ func main() {
 				return
 			}
 
-			isAvailable, err := strconv.ParseBool(isAvailableStr)
-			if err != nil {
-				http.Error(w, fmt.Sprintf("Falha ao adicionar produto: %v", err), http.StatusBadRequest)
-				return
-			}
-
+			isAvailable := isAvailableStr == "on"
 			// Create product
 			product, err := products.CreateProduct(name, price, imagePath, category, isAvailable)
 			if err != nil {
 				// Clean up uploaded file if product creation fails
 				os.Remove(filepath.Join(uploadPath, filepath.Base(imagePath)))
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+
+				// Return error message for HTMX
+				if r.Header.Get("HX-Request") == "true" {
+					tmpl, _ := template.ParseFiles("web/templates/admin-error-message.html")
+					tmpl.Execute(w, err.Error())
+				} else {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
 				return
 			}
 
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusCreated)
-			json.NewEncoder(w).Encode(product)
+			// Return product card HTML for HTMX
+			if r.Header.Get("HX-Request") == "true" {
+				// Create function map for template
+				funcMap := template.FuncMap{
+					"formatCategory": func(category string) string {
+						categories := map[string]string{
+							"bebedouros":    "Bebedouros",
+							"purificadores": "Purificadores",
+							"refis":         "Refis",
+							"pecas":         "Peças",
+						}
+						if val, ok := categories[category]; ok {
+							return val
+						}
+						return category
+					},
+				}
+
+				tmpl, err := template.New("admin-product-card.html").Funcs(funcMap).ParseFiles("web/templates/admin-product-card.html")
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				w.Header().Set("Content-Type", "text/html")
+				tmpl.Execute(w, product)
+			} else {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				json.NewEncoder(w).Encode(product)
+			}
 
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -279,6 +344,7 @@ func main() {
 			priceStr := r.FormValue("price")
 			category := r.FormValue("category")
 			currentImage := r.FormValue("current_image")
+			isAvailableStr := r.FormValue("is_available")
 
 			if name == "" || priceStr == "" || category == "" {
 				http.Error(w, "Missing required fields", http.StatusBadRequest)
@@ -290,6 +356,9 @@ func main() {
 				http.Error(w, "Invalid price format", http.StatusBadRequest)
 				return
 			}
+
+			// Parse is_available checkbox (unchecked checkboxes are not sent in form data)
+			isAvailable := isAvailableStr == "on"
 
 			// Check if new image was uploaded
 			imagePath := currentImage
@@ -312,13 +381,56 @@ func main() {
 			}
 
 			// Update product
-			if err := products.UpdateProduct(id, name, price, imagePath, category); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+			if err := products.UpdateProduct(id, name, price, imagePath, category, isAvailable); err != nil {
+				// Return error message for HTMX
+				if r.Header.Get("HX-Request") == "true" {
+					tmpl, _ := template.ParseFiles("web/templates/admin-error-message.html")
+					tmpl.Execute(w, err.Error())
+				} else {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
 				return
 			}
 
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]string{"message": "Product updated successfully"})
+			// Return updated product card HTML for HTMX
+			if r.Header.Get("HX-Request") == "true" {
+				// Get the updated product data
+				updatedProduct, err := products.GetProductByID(id)
+				if err != nil {
+					tmpl, _ := template.ParseFiles("web/templates/admin-error-message.html")
+					tmpl.Execute(w, err.Error())
+					return
+				}
+
+				// Create function map for template
+				funcMap := template.FuncMap{
+					"formatCategory": func(category string) string {
+						categories := map[string]string{
+							"bebedouros":    "Bebedouros",
+							"purificadores": "Purificadores",
+							"refis":         "Refis",
+							"pecas":         "Peças",
+						}
+						if val, ok := categories[category]; ok {
+							return val
+						}
+						return category
+					},
+				}
+
+				tmpl, err := template.New("admin-product-card.html").Funcs(funcMap).ParseFiles("web/templates/admin-product-card.html")
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				w.Header().Set("Content-Type", "text/html")
+				w.Header().Set("HX-Trigger", "closeEditModal")
+				tmpl.Execute(w, updatedProduct)
+			} else {
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]string{"message": "Product updated successfully"})
+			}
 
 		case http.MethodDelete:
 			// Get product to find image path
@@ -330,16 +442,64 @@ func main() {
 			}
 
 			if err := products.DeleteProduct(id); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				// Return error message for HTMX
+				if r.Header.Get("HX-Request") == "true" {
+					tmpl, _ := template.ParseFiles("web/templates/admin-error-message.html")
+					tmpl.Execute(w, err.Error())
+				} else {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
 				return
 			}
 
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]string{"message": "Product deleted successfully"})
+			// Return empty response for HTMX (element will be deleted)
+			if r.Header.Get("HX-Request") == "true" {
+				w.WriteHeader(http.StatusOK)
+			} else {
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]string{"message": "Product deleted successfully"})
+			}
 
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
+	}))
+
+	// HTMX-specific admin routes
+	http.HandleFunc("/admin/products/", admin.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
+		// Extract ID from path
+		path := strings.TrimPrefix(r.URL.Path, "/admin/products/")
+		parts := strings.Split(path, "/")
+		if len(parts) < 1 {
+			http.Error(w, "Invalid path", http.StatusBadRequest)
+			return
+		}
+
+		id, err := strconv.Atoi(parts[0])
+		if err != nil {
+			http.Error(w, "Invalid product ID", http.StatusBadRequest)
+			return
+		}
+
+		// Handle edit form request
+		if len(parts) >= 2 && parts[1] == "edit" {
+			product, err := products.GetProductByID(id)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			tmpl, err := template.ParseFiles("web/templates/admin-edit-form.html")
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			tmpl.Execute(w, product)
+			return
+		}
+
+		http.Error(w, "Not found", http.StatusNotFound)
 	}))
 
 	fmt.Println("Server starting at port 8080")

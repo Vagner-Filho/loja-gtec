@@ -1,10 +1,16 @@
 {{range .}}
-<div class="bg-white rounded-lg shadow-md overflow-hidden product-card" data-name="{{.Name}}" data-price="{{.Price}}">
+<div class="bg-white rounded-lg shadow-md overflow-hidden product-card {{if not .IsAvailable}}opacity-75{{end}}" data-name="{{.Name}}" data-price="{{.Price}}" data-available="{{.IsAvailable}}">
   <img src="{{.Image}}" alt="{{.Name}}" class="w-full h-64 object-contain">
   <div class="p-4">
     <h3 class="text-xl font-bold mb-2">{{.Name}}</h3>
-    <p class="text-gray-600 mb-4">R$ {{printf "%.2f" .Price}}</p>
-    <button class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 add-to-cart">Adicionar ao Carrinho</button>
+    <p class="text-gray-600 mb-2">R$ {{printf "%.2f" .Price}}</p>
+    {{if .IsAvailable}}
+      <span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full mb-3">Em Estoque</span>
+      <button class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 add-to-cart w-full">Adicionar ao Carrinho</button>
+    {{else}}
+      <span class="inline-block bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full mb-3">Fora de Estoque</span>
+      <button class="bg-gray-400 text-white px-4 py-2 rounded cursor-not-allowed w-full" disabled>Indisponível</button>
+    {{end}}
   </div>
   <script type="module">
   import { addToCart } from "/static/js/cart.js"

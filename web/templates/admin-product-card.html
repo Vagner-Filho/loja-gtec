@@ -1,0 +1,41 @@
+{{if .}}
+<div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow" data-product-id="{{.ID}}">
+  <div class="flex items-start gap-4">
+    <img src="{{.Image}}" alt="{{.Name}}" class="w-24 h-24 object-contain rounded">
+    <div class="flex-1">
+      <h3 class="text-lg font-semibold text-gray-800">{{.Name}}</h3>
+      <p class="text-gray-600 mt-1">R$ {{printf "%.2f" .Price}}</p>
+      <p class="text-sm text-gray-500 mt-1">Category: <span class="font-medium">{{formatCategory .Category}}</span></p>
+      <p class="text-sm mt-1">
+        {{if .IsAvailable}}
+          <span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Em Estoque</span>
+        {{else}}
+          <span class="inline-block bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">Fora de Estoque</span>
+        {{end}}
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <button 
+        type="button"
+        hx-get="/admin/products/{{.ID}}/edit"
+        hx-target="#edit-modal-body"
+        hx-trigger="click"
+        onclick="openEditModal()"
+        class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors text-sm font-medium"
+      >
+        Edit
+      </button>
+      <button 
+        type="button"
+        hx-delete="/api/admin/products/{{.ID}}"
+        hx-target='[data-product-id="{{.ID}}"]'
+        hx-swap="delete"
+        hx-confirm="Are you sure you want to delete this product?"
+        class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors text-sm font-medium"
+      >
+        Delete
+      </button>
+    </div>
+  </div>
+</div>
+{{end}}

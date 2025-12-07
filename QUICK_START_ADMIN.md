@@ -10,7 +10,7 @@
 2. Build and run:
    ```bash
    go build -o lojagtec cmd/server/main.go
-   ./lojagtec
+   air
    ```
 
 3. Access admin panel:

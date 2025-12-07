@@ -104,13 +104,13 @@ function validateCVV(cvv) {
 function showError(input, message) {
   const parent = input.parentElement;
   let error = parent.querySelector('.error-message');
-  
+
   if (!error) {
     error = document.createElement('p');
     error.className = 'error-message text-red-500 text-sm mt-1';
     parent.appendChild(error);
   }
-  
+
   error.textContent = message;
   input.classList.add('border-red-500');
   input.classList.remove('border-gray-300');
@@ -120,11 +120,11 @@ function showError(input, message) {
 function clearError(input) {
   const parent = input.parentElement;
   const error = parent.querySelector('.error-message');
-  
+
   if (error) {
     error.remove();
   }
-  
+
   input.classList.remove('border-red-500');
   input.classList.add('border-gray-300');
 }
@@ -198,10 +198,17 @@ function handleCheckout(e) {
   const city = document.getElementById('city').value.trim();
   const state = document.getElementById('state').value.trim();
   const zipCode = document.getElementById('zipCode').value.trim();
-  const cardName = document.getElementById('cardName').value.trim();
-  const cardNumber = document.getElementById('cardNumber').value.trim();
-  const expiry = document.getElementById('expiry').value.trim();
-  const cvv = document.getElementById('cvv').value.trim();
+
+  // Get selected payment method
+  const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value;
+
+  // Payment method specific fields
+  const cardName = document.getElementById('cardName')?.value.trim() || '';
+  const cardNumber = document.getElementById('cardNumber')?.value.trim() || '';
+  const expiry = document.getElementById('expiry')?.value.trim() || '';
+  const cvv = document.getElementById('cvv')?.value.trim() || '';
+  const cpf = document.getElementById('cpf')?.value.trim() || '';
+  const pixKey = document.getElementById('pixKey')?.value.trim() || '';
 
   let isValid = true;
 
@@ -258,34 +265,49 @@ function handleCheckout(e) {
     isValid = false;
   }
 
-  // Validate payment
-  if (!cardName) {
-    showError(document.getElementById('cardName'), 'Name on card is required');
-    isValid = false;
-  }
+  // Validate payment method specific fields
+  if (paymentMethod === 'credit_card') {
+    if (!cardName) {
+      showError(document.getElementById('cardName'), 'Name on card is required');
+      isValid = false;
+    }
 
-  if (!cardNumber) {
-    showError(document.getElementById('cardNumber'), 'Card number is required');
-    isValid = false;
-  } else if (!validateCardNumber(cardNumber)) {
-    showError(document.getElementById('cardNumber'), 'Please enter a valid card number');
-    isValid = false;
-  }
+    if (!cardNumber) {
+      showError(document.getElementById('cardNumber'), 'Card number is required');
+      isValid = false;
+    } else if (!validateCardNumber(cardNumber)) {
+      showError(document.getElementById('cardNumber'), 'Please enter a valid card number');
+      isValid = false;
+    }
 
-  if (!expiry) {
-    showError(document.getElementById('expiry'), 'Expiry date is required');
-    isValid = false;
-  } else if (!validateExpiry(expiry)) {
-    showError(document.getElementById('expiry'), 'Please enter a valid expiry date');
-    isValid = false;
-  }
+    if (!expiry) {
+      showError(document.getElementById('expiry'), 'Expiry date is required');
+      isValid = false;
+    } else if (!validateExpiry(expiry)) {
+      showError(document.getElementById('expiry'), 'Please enter a valid expiry date');
+      isValid = false;
+    }
 
-  if (!cvv) {
-    showError(document.getElementById('cvv'), 'CVV is required');
-    isValid = false;
-  } else if (!validateCVV(cvv)) {
-    showError(document.getElementById('cvv'), 'Please enter a valid CVV');
-    isValid = false;
+    if (!cvv) {
+      showError(document.getElementById('cvv'), 'CVV is required');
+      isValid = false;
+    } else if (!validateCVV(cvv)) {
+      showError(document.getElementById('cvv'), 'Please enter a valid CVV');
+      isValid = false;
+    }
+  } else if (paymentMethod === 'boleto') {
+    if (!cpf) {
+      showError(document.getElementById('cpf'), 'CPF/CNPJ is required');
+      isValid = false;
+    } else if (!validateCPF(cpf)) {
+      showError(document.getElementById('cpf'), 'Please enter a valid CPF or CNPJ');
+      isValid = false;
+    }
+  } else if (paymentMethod === 'pix') {
+    if (!pixKey) {
+      showError(document.getElementById('pixKey'), 'PIX key is required');
+      isValid = false;
+    }
   }
 
   if (!isValid) {
@@ -313,9 +335,70 @@ function handleCheckout(e) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// Payment method switching
+function setupPaymentMethodSwitching() {
+  const paymentRadios = document.querySelectorAll('input[name="paymentMethod"]');
+  const paymentForms = document.querySelectorAll('.payment-form');
+  const paymentOptionCards = document.querySelectorAll('.payment-option-card');
+
+  paymentRadios.forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      const selectedMethod = e.target.value;
+
+      // Hide all forms
+      paymentForms.forEach(form => form.classList.add('hidden'));
+
+      // Show selected form
+      const selectedForm = document.getElementById(`${selectedMethod}-form`);
+      if (selectedForm) {
+        selectedForm.classList.remove('hidden');
+      }
+
+      // Update card styling
+      paymentOptionCards.forEach(card => {
+        card.classList.remove('border-blue-500', 'bg-blue-50');
+        card.classList.add('border-gray-200');
+      });
+
+      // Highlight selected card
+      const selectedCard = e.target.closest('.payment-option').querySelector('.payment-option-card');
+      if (selectedCard) {
+        selectedCard.classList.remove('border-gray-200');
+        selectedCard.classList.add('border-blue-500', 'bg-blue-50');
+      }
+    });
+  });
+
+  // Set initial state
+  const defaultRadio = document.querySelector('input[name="paymentMethod"]:checked');
+  if (defaultRadio) {
+    defaultRadio.dispatchEvent(new Event('change'));
+  }
+}
+
+// Format CPF/CNPJ
+function formatCPF(value) {
+  const cleaned = value.replace(/\D/g, '');
+
+  if (cleaned.length <= 11) {
+    // CPF format: 000.000.000-00
+    return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  } else {
+    // CNPJ format: 00.000.000/0000-00
+    return cleaned.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+  }
+}
+
+// Validate CPF
+function validateCPF(cpf) {
+  const cleaned = cpf.replace(/\D/g, '');
+  return cleaned.length === 11 || cleaned.length === 14;
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   renderCheckoutItems();
+  setupPaymentMethodSwitching();
 
   // Card number formatting
   const cardNumberInput = document.getElementById('cardNumber');
@@ -338,6 +421,14 @@ document.addEventListener('DOMContentLoaded', () => {
   if (cvvInput) {
     cvvInput.addEventListener('input', (e) => {
       e.target.value = e.target.value.replace(/\D/g, '');
+    });
+  }
+
+  // CPF formatting
+  const cpfInput = document.getElementById('cpf');
+  if (cpfInput) {
+    cpfInput.addEventListener('input', (e) => {
+      e.target.value = formatCPF(e.target.value);
     });
   }
 
