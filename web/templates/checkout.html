@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checkout - Lojagtec</title>
+    <title>Finalizar Compra - Lojagtec</title>
     <link href="/static/css/dist/style.css" rel="stylesheet">
   </head>
   <body class="bg-gray-100 text-gray-800">
@@ -11,7 +11,7 @@
       <div class="container mx-auto px-4 py-4 flex justify-between items-center">
         <h1 class="text-2xl font-bold">Lojagtec</h1>
         <nav class="flex items-center">
-          <a href="/" class="px-4 text-blue-500 hover:text-blue-700">Back to Shop</a>
+          <a href="/" class="px-4 text-blue-500 hover:text-blue-700">Voltar à Loja</a>
         </nav>
       </div>
     </header>
@@ -25,12 +25,12 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h2 class="text-3xl font-bold text-gray-900 mb-4">Order Confirmed!</h2>
-          <p class="text-gray-600 mb-2">Thank you for your purchase.</p>
-          <p class="text-gray-600 mb-8">Order #<span id="order-number" class="font-mono font-semibold"></span></p>
-          <p class="text-gray-500 text-sm mb-8">A confirmation email has been sent to your email address.</p>
+          <h2 class="text-3xl font-bold text-gray-900 mb-4">Pedido Confirmado!</h2>
+          <p class="text-gray-600 mb-2">Obrigado pela sua compra.</p>
+          <p class="text-gray-600 mb-8">Pedido #<span id="order-number" class="font-mono font-semibold"></span></p>
+          <p class="text-gray-500 text-sm mb-8">Um email de confirmação foi enviado para seu endereço de email.</p>
           <a href="/" class="inline-block bg-blue-500 text-white px-8 py-3 rounded-lg hover:bg-blue-600 transition-colors duration-200 font-semibold">
-            Continue Shopping
+            Continuar Comprando
           </a>
         </div>
       </div>
@@ -41,71 +41,71 @@
         <div class="lg:col-span-2 space-y-6">
           <!-- Contact Information -->
           <div class="bg-white rounded-2xl shadow-md p-6">
-            <h2 class="text-2xl font-bold mb-6">Contact Information</h2>
+            <h2 class="text-2xl font-bold mb-6">Informações de Contato</h2>
             <div class="space-y-4">
               <div>
-                <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Endereço de Email</label>
                 <input type="email" id="email" name="email" required
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="your@email.com">
+                  placeholder="seu@email.com">
               </div>
               <div>
-                <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">Telefone</label>
                 <input type="tel" id="phone" name="phone" required
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="(555) 123-4567">
+                  placeholder="(11) 98765-4321">
               </div>
             </div>
           </div>
 
           <!-- Shipping Information -->
           <div class="bg-white rounded-2xl shadow-md p-6">
-            <h2 class="text-2xl font-bold mb-6">Shipping Address</h2>
+            <h2 class="text-2xl font-bold mb-6">Endereço de Entrega</h2>
             <div class="space-y-4">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label for="firstName" class="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                  <label for="firstName" class="block text-sm font-medium text-gray-700 mb-2">Nome</label>
                   <input type="text" id="firstName" name="firstName" required
                     class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    placeholder="John">
+                    placeholder="João">
                 </div>
                 <div>
-                  <label for="lastName" class="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                  <label for="lastName" class="block text-sm font-medium text-gray-700 mb-2">Sobrenome</label>
                   <input type="text" id="lastName" name="lastName" required
                     class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    placeholder="Doe">
+                    placeholder="Silva">
                 </div>
               </div>
               <div>
-                <label for="address" class="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
+                <label for="address" class="block text-sm font-medium text-gray-700 mb-2">Endereço</label>
                 <input type="text" id="address" name="address" required
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="123 Main Street">
+                  placeholder="Rua Principal, 123">
               </div>
               <div>
-                <label for="apartment" class="block text-sm font-medium text-gray-700 mb-2">Apartment, suite, etc. (optional)</label>
+                <label for="apartment" class="block text-sm font-medium text-gray-700 mb-2">Apartamento, sala, etc. (opcional)</label>
                 <input type="text" id="apartment" name="apartment"
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Apt 4B">
+                  placeholder="Apto 4B">
               </div>
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label for="city" class="block text-sm font-medium text-gray-700 mb-2">City</label>
+                  <label for="city" class="block text-sm font-medium text-gray-700 mb-2">Cidade</label>
                   <input type="text" id="city" name="city" required
                     class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    placeholder="New York">
+                    placeholder="São Paulo">
                 </div>
                 <div>
-                  <label for="state" class="block text-sm font-medium text-gray-700 mb-2">State</label>
+                  <label for="state" class="block text-sm font-medium text-gray-700 mb-2">Estado</label>
                   <input type="text" id="state" name="state" required
                     class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    placeholder="NY">
+                    placeholder="SP">
                 </div>
                 <div>
-                  <label for="zipCode" class="block text-sm font-medium text-gray-700 mb-2">ZIP Code</label>
+                  <label for="zipCode" class="block text-sm font-medium text-gray-700 mb-2">CEP</label>
                   <input type="text" id="zipCode" name="zipCode" required
                     class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    placeholder="10001">
+                    placeholder="01310-100">
                 </div>
               </div>
             </div>
@@ -113,7 +113,7 @@
 
           <!-- Payment Method Selection -->
           <div class="bg-white rounded-2xl shadow-md p-6">
-            <h2 class="text-2xl font-bold mb-6">Payment Method</h2>
+            <h2 class="text-2xl font-bold mb-6">Forma de Pagamento</h2>
             
             <!-- Payment Method Options -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -123,7 +123,7 @@
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto mb-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                   </svg>
-                  <span class="font-medium">Credit Card</span>
+                  <span class="font-medium">Cartão de Crédito</span>
                 </div>
               </label>
 
@@ -150,23 +150,23 @@
 
             <!-- Credit Card Form -->
             <div id="credit_card-form" class="payment-form space-y-4">
-              <h3 class="text-lg font-semibold mb-4">Credit Card Information</h3>
+              <h3 class="text-lg font-semibold mb-4">Informações do Cartão de Crédito</h3>
               <div>
-                <label for="cardName" class="block text-sm font-medium text-gray-700 mb-2">Name on Card</label>
+                <label for="cardName" class="block text-sm font-medium text-gray-700 mb-2">Nome no Cartão</label>
                 <input type="text" id="cardName" name="cardName" required
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="John Doe">
+                  placeholder="João Silva">
               </div>
               <div>
-                <label for="cardNumber" class="block text-sm font-medium text-gray-700 mb-2">Card Number</label>
+                <label for="cardNumber" class="block text-sm font-medium text-gray-700 mb-2">Número do Cartão</label>
                 <input type="text" id="cardNumber" name="cardNumber" required maxlength="19"
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="1234 5678 9012 3456">
+                  placeholder="0000 0000 0000 0000">
               </div>
               <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <label for="expiry" class="block text-sm font-medium text-gray-700 mb-2">Expiry Date</label>
-                  <input type="text" id="expiry" name="expiry" required maxlength="5" placeholder="MM/YY"
+                  <label for="expiry" class="block text-sm font-medium text-gray-700 mb-2">Data de Validade</label>
+                  <input type="text" id="expiry" name="expiry" required maxlength="5" placeholder="MM/AA"
                     class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
                 </div>
                 <div>
@@ -180,26 +180,26 @@
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
-                  Secure payment powered by SSL encryption
+                  Pagamento seguro com criptografia SSL
                 </p>
               </div>
             </div>
 
             <!-- Boleto Form -->
             <div id="boleto-form" class="payment-form hidden space-y-4">
-              <h3 class="text-lg font-semibold mb-4">Boleto Information</h3>
+              <h3 class="text-lg font-semibold mb-4">Informações do Boleto</h3>
               <div class="bg-green-50 border border-green-200 rounded-lg p-4">
                 <div class="flex items-start">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600 mt-0.5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <div>
-                    <p class="text-sm font-medium text-green-800 mb-1">How it works:</p>
+                    <p class="text-sm font-medium text-green-800 mb-1">Como funciona:</p>
                     <ul class="text-sm text-green-700 space-y-1">
-                      <li>• After confirming your order, we'll generate a boleto</li>
-                      <li>• You'll receive the boleto via email</li>
-                      <li>• Pay at any bank, lottery, or online banking</li>
-                      <li>• Your order will be processed after payment confirmation</li>
+                      <li>• Após confirmar seu pedido, geraremos um boleto</li>
+                      <li>• Você receberá o boleto por email</li>
+                      <li>• Pague em qualquer banco, lotérica ou internet banking</li>
+                      <li>• Seu pedido será processado após a confirmação do pagamento</li>
                     </ul>
                   </div>
                 </div>
@@ -212,39 +212,39 @@
               </div>
               <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                 <p class="text-sm text-yellow-700">
-                  <strong>Attention:</strong> Boleto payment takes up to 3 business days to be processed.
+                  <strong>Atenção:</strong> O pagamento do boleto leva até 3 dias úteis para ser processado.
                 </p>
               </div>
             </div>
 
             <!-- PIX Form -->
             <div id="pix-form" class="payment-form hidden space-y-4">
-              <h3 class="text-lg font-semibold mb-4">PIX Information</h3>
+              <h3 class="text-lg font-semibold mb-4">Informações do PIX</h3>
               <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
                 <div class="flex items-start">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-600 mt-0.5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <div>
-                    <p class="text-sm font-medium text-purple-800 mb-1">How it works:</p>
+                    <p class="text-sm font-medium text-purple-800 mb-1">Como funciona:</p>
                     <ul class="text-sm text-purple-700 space-y-1">
-                      <li>• After confirming your order, we'll generate a PIX QR code</li>
-                      <li>• You'll receive the QR code via email and on the confirmation page</li>
-                      <li>• Scan the code with any banking app to pay</li>
-                      <li>• Your order will be processed immediately after payment</li>
+                      <li>• Após confirmar seu pedido, geraremos um código QR PIX</li>
+                      <li>• Você receberá o código QR por email e na página de confirmação</li>
+                      <li>• Escaneie o código com qualquer aplicativo bancário para pagar</li>
+                      <li>• Seu pedido será processado imediatamente após o pagamento</li>
                     </ul>
                   </div>
                 </div>
               </div>
               <div>
-                <label for="pixKey" class="block text-sm font-medium text-gray-700 mb-2">PIX Key (CPF/CNPJ/Phone/Email)</label>
+                <label for="pixKey" class="block text-sm font-medium text-gray-700 mb-2">Chave PIX (CPF/CNPJ/Telefone/Email)</label>
                 <input type="text" id="pixKey" name="pixKey" required
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="your@email.com or 000.000.000-00">
+                  placeholder="seu@email.com ou 000.000.000-00">
               </div>
               <div class="bg-green-50 border border-green-200 rounded-lg p-3">
                 <p class="text-sm text-green-700">
-                  <strong>Benefit:</strong> PIX payment is processed instantly, so your order ships faster!
+                  <strong>Benefício:</strong> O pagamento PIX é processado instantaneamente, então seu pedido é enviado mais rápido!
                 </p>
               </div>
             </div>
@@ -254,7 +254,7 @@
         <!-- Right Column - Order Summary -->
         <div class="lg:col-span-1">
           <div class="bg-white rounded-2xl shadow-md p-6 sticky top-8">
-            <h2 class="text-2xl font-bold mb-6">Order Summary</h2>
+            <h2 class="text-2xl font-bold mb-6">Resumo do Pedido</h2>
             
             <!-- Cart Items -->
             <div id="checkout-items" class="space-y-4 mb-6 max-h-64 overflow-y-auto">
@@ -266,8 +266,8 @@
               <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
-              <p class="text-gray-500 mb-4">Your cart is empty</p>
-              <a href="/" class="text-blue-500 hover:text-blue-700 font-semibold">Go back to shop</a>
+              <p class="text-gray-500 mb-4">Seu carrinho está vazio</p>
+              <a href="/" class="text-blue-500 hover:text-blue-700 font-semibold">Voltar à loja</a>
             </div>
 
             <!-- Order Totals -->

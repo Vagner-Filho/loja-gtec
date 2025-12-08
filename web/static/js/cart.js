@@ -67,8 +67,8 @@ function renderCart() {
         <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24 mx-auto text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
         </svg>
-        <h3 class="text-lg font-semibold text-gray-700 mb-2">Your cart is empty</h3>
-        <p class="text-gray-500">Add some products to get started!</p>
+        <h3 class="text-lg font-semibold text-gray-700 mb-2">Seu carrinho está vazio</h3>
+        <p class="text-gray-500">Adicione alguns produtos para começar!</p>
       </div>
     `;
   } else {
@@ -79,7 +79,7 @@ function renderCart() {
         <div class="flex justify-between items-start mb-3">
           <div class="flex-1">
             <h4 class="font-semibold text-gray-900 text-lg">${item.name}</h4>
-            <p class="text-gray-500 text-sm mt-1">$${item.price.toFixed(2)} cada</p>
+            <p class="text-gray-500 text-sm mt-1">R$ ${item.price.toFixed(2)} cada</p>
           </div>
           <button class="remove-item text-gray-400 hover:text-red-500 transition-colors duration-200" data-name="${item.name}">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -103,7 +103,7 @@ function renderCart() {
           </div>
           <div class="text-right">
             <p class="text-sm text-gray-500">Subtotal</p>
-            <p class="text-lg font-bold text-gray-900">$${(item.price * item.quantity).toFixed(2)}</p>
+            <p class="text-lg font-bold text-gray-900">R$ ${(item.price * item.quantity).toFixed(2)}</p>
           </div>
         </div>
       `;
@@ -115,7 +115,7 @@ function renderCart() {
 
   cartTotalContainer.innerText = total.toFixed(2);
   if (cartCountContainer) {
-    cartCountContainer.innerText = `${totalItems} ${totalItems === 1 ? 'item' : 'items'}`;
+    cartCountContainer.innerText = `${totalItems} ${totalItems === 1 ? 'item' : 'itens'}`;
   }
 }
 
@@ -188,7 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const clearCartButton = document.getElementById('clear-cart');
   if (clearCartButton) {
     clearCartButton.addEventListener('click', () => {
-      if (confirm('Are you sure you want to clear your cart?')) {
+      if (confirm('Tem certeza que deseja limpar seu carrinho?')) {
         clearCart();
       }
     });

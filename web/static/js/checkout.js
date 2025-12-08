@@ -217,95 +217,95 @@ function handleCheckout(e) {
 
   // Validate email
   if (!email) {
-    showError(document.getElementById('email'), 'Email is required');
+    showError(document.getElementById('email'), 'Email é obrigatório');
     isValid = false;
   } else if (!validateEmail(email)) {
-    showError(document.getElementById('email'), 'Please enter a valid email');
+    showError(document.getElementById('email'), 'Por favor, insira um email válido');
     isValid = false;
   }
 
   // Validate phone
   if (!phone) {
-    showError(document.getElementById('phone'), 'Phone number is required');
+    showError(document.getElementById('phone'), 'Telefone é obrigatório');
     isValid = false;
   } else if (!validatePhone(phone)) {
-    showError(document.getElementById('phone'), 'Please enter a valid phone number');
+    showError(document.getElementById('phone'), 'Por favor, insira um telefone válido');
     isValid = false;
   }
 
   // Validate name fields
   if (!firstName) {
-    showError(document.getElementById('firstName'), 'First name is required');
+    showError(document.getElementById('firstName'), 'Nome é obrigatório');
     isValid = false;
   }
 
   if (!lastName) {
-    showError(document.getElementById('lastName'), 'Last name is required');
+    showError(document.getElementById('lastName'), 'Sobrenome é obrigatório');
     isValid = false;
   }
 
   // Validate address
   if (!address) {
-    showError(document.getElementById('address'), 'Address is required');
+    showError(document.getElementById('address'), 'Endereço é obrigatório');
     isValid = false;
   }
 
   if (!city) {
-    showError(document.getElementById('city'), 'City is required');
+    showError(document.getElementById('city'), 'Cidade é obrigatória');
     isValid = false;
   }
 
   if (!state) {
-    showError(document.getElementById('state'), 'State is required');
+    showError(document.getElementById('state'), 'Estado é obrigatório');
     isValid = false;
   }
 
   if (!zipCode) {
-    showError(document.getElementById('zipCode'), 'ZIP code is required');
+    showError(document.getElementById('zipCode'), 'CEP é obrigatório');
     isValid = false;
   }
 
   // Validate payment method specific fields
   if (paymentMethod === 'credit_card') {
     if (!cardName) {
-      showError(document.getElementById('cardName'), 'Name on card is required');
+      showError(document.getElementById('cardName'), 'Nome no cartão é obrigatório');
       isValid = false;
     }
 
     if (!cardNumber) {
-      showError(document.getElementById('cardNumber'), 'Card number is required');
+      showError(document.getElementById('cardNumber'), 'Número do cartão é obrigatório');
       isValid = false;
     } else if (!validateCardNumber(cardNumber)) {
-      showError(document.getElementById('cardNumber'), 'Please enter a valid card number');
+      showError(document.getElementById('cardNumber'), 'Por favor, insira um número de cartão válido');
       isValid = false;
     }
 
     if (!expiry) {
-      showError(document.getElementById('expiry'), 'Expiry date is required');
+      showError(document.getElementById('expiry'), 'Data de validade é obrigatória');
       isValid = false;
     } else if (!validateExpiry(expiry)) {
-      showError(document.getElementById('expiry'), 'Please enter a valid expiry date');
+      showError(document.getElementById('expiry'), 'Por favor, insira uma data de validade válida');
       isValid = false;
     }
 
     if (!cvv) {
-      showError(document.getElementById('cvv'), 'CVV is required');
+      showError(document.getElementById('cvv'), 'CVV é obrigatório');
       isValid = false;
     } else if (!validateCVV(cvv)) {
-      showError(document.getElementById('cvv'), 'Please enter a valid CVV');
+      showError(document.getElementById('cvv'), 'Por favor, insira um CVV válido');
       isValid = false;
     }
   } else if (paymentMethod === 'boleto') {
     if (!cpf) {
-      showError(document.getElementById('cpf'), 'CPF/CNPJ is required');
+      showError(document.getElementById('cpf'), 'CPF/CNPJ é obrigatório');
       isValid = false;
     } else if (!validateCPF(cpf)) {
-      showError(document.getElementById('cpf'), 'Please enter a valid CPF or CNPJ');
+      showError(document.getElementById('cpf'), 'Por favor, insira um CPF ou CNPJ válido');
       isValid = false;
     }
   } else if (paymentMethod === 'pix') {
     if (!pixKey) {
-      showError(document.getElementById('pixKey'), 'PIX key is required');
+      showError(document.getElementById('pixKey'), 'Chave PIX é obrigatória');
       isValid = false;
     }
   }
