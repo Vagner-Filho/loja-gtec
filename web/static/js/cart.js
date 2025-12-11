@@ -11,7 +11,7 @@ function addToCart(productName, price) {
   saveCart(cart);
   updateCartBadge();
 
-  const dialogExists = document.querySelector('#cart-container dialog');
+  const dialogExists = document.querySelector('#cart-container #cart-modal');
   if (dialogExists) {
     showCart();
   } else {
@@ -28,7 +28,7 @@ function removeFromCart(productName) {
   saveCart(cart);
   updateCartBadge();
 
-  const dialogExists = document.querySelector('#cart-container dialog');
+  const dialogExists = document.querySelector('#cart-container #cart-modal');
   if (dialogExists) {
     renderCart();
   }
@@ -46,7 +46,7 @@ function updateQuantity(productName, delta) {
     saveCart(cart);
     updateCartBadge();
 
-    const dialogExists = document.querySelector('#cart-container dialog');
+    const dialogExists = document.querySelector('#cart-container #cart-modal');
     if (dialogExists) {
       renderCart();
     }
@@ -57,7 +57,7 @@ function clearCart() {
   saveCart([]);
   updateCartBadge();
 
-  const dialogExists = document.querySelector('#cart-container dialog');
+  const dialogExists = document.querySelector('#cart-container #cart-modal');
   if (dialogExists) {
     renderCart();
   }
@@ -71,10 +71,13 @@ function saveCart(cart) {
   localStorage.setItem('cart', JSON.stringify(cart));
 }
 
+const INSTALLATION_SERVICE_NAME = 'Serviço de Instalação';
+
 function renderCart() {
   const cartItemsContainer = document.getElementById('cart-items');
   const cartTotalContainer = document.getElementById('cart-total');
   const cartCountContainer = document.getElementById('cart-count');
+  const proceedToCheckoutButton = document.getElementById('proceed-to-checkout');
 
   // Early return if cart elements don't exist yet
   if (!cartItemsContainer || !cartTotalContainer) {
@@ -82,11 +85,14 @@ function renderCart() {
   }
 
   const cart = getCart();
+  // Filter out installation service for display and calculations
+  const displayCart = cart.filter(item => item.name !== INSTALLATION_SERVICE_NAME);
+  
   cartItemsContainer.innerHTML = '';
   let total = 0;
   let totalItems = 0;
 
-  if (cart.length === 0) {
+  if (displayCart.length === 0) {
     cartItemsContainer.innerHTML = `
       <div class="text-center py-12">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24 mx-auto text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -96,8 +102,15 @@ function renderCart() {
         <p class="text-gray-500">Adicione alguns produtos para começar!</p>
       </div>
     `;
+
+    // Disable checkout button when cart is empty
+    if (proceedToCheckoutButton) {
+      proceedToCheckoutButton.disabled = true;
+      proceedToCheckoutButton.classList.add('opacity-50', 'cursor-not-allowed', 'hover:scale-100');
+      proceedToCheckoutButton.classList.remove('hover:scale-105', 'cursor-pointer');
+    }
   } else {
-    cart.forEach(item => {
+    displayCart.forEach(item => {
       const itemElement = document.createElement('div');
       itemElement.className = 'bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200';
       itemElement.innerHTML = `
@@ -136,6 +149,13 @@ function renderCart() {
       total += item.price * item.quantity;
       totalItems += item.quantity;
     });
+
+    // Enable checkout button when cart has items
+    if (proceedToCheckoutButton) {
+      proceedToCheckoutButton.disabled = false;
+      proceedToCheckoutButton.classList.remove('opacity-50', 'cursor-not-allowed', 'hover:scale-100');
+      proceedToCheckoutButton.classList.add('hover:scale-105', 'cursor-pointer');
+    }
   }
 
   cartTotalContainer.innerText = total.toFixed(2);
@@ -145,11 +165,19 @@ function renderCart() {
 }
 
 function showCart() {
-  const dialog = document.querySelector('#cart-container dialog');
-  if (dialog) {
+  loadCartModal().then(() => {
+    const dialog = document.querySelector('#cart-container #cart-modal');
+    if (!dialog) {
+      return;
+    }
+
+    if (dialog.open) {
+      dialog.close();
+    }
+
     dialog.showModal();
-    renderCart(); // Render after showing
-    // Trigger animation
+    renderCart();
+
     setTimeout(() => {
       const content = dialog.querySelector('#cart-modal-content');
       if (content) {
@@ -157,15 +185,13 @@ function showCart() {
         content.classList.add('scale-100', 'opacity-100');
       }
     }, 10);
+
     cartModalUISetup();
-  } else {
-    // Load modal first, then show
-    loadCartModal().then(() => showCart());
-  }
+  });
 }
 
 function hideCart() {
-  const dialog = document.querySelector('#cart-container dialog');
+  const dialog = document.querySelector('#cart-container #cart-modal');
   if (dialog) {
     // Animate out
     const content = dialog.querySelector('#cart-modal-content');
@@ -180,13 +206,110 @@ function hideCart() {
   }
 }
 
+function loadInstallationServiceModal() {
+  const container = document.getElementById('cart-container');
+  if (!container) {
+    console.error('Cart container not found');
+    return Promise.resolve(false);
+  }
+
+  const existingModal = container.querySelector('#installation-modal');
+  if (existingModal) {
+    return Promise.resolve(true);
+  }
+
+  return fetch('/installation-service-modal')
+    .then(response => response.text())
+    .then(html => {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const modal = doc.querySelector('#installation-modal');
+      const style = doc.querySelector('style');
+
+      if (modal) {
+        container.appendChild(modal);
+      }
+
+      if (style) {
+        container.appendChild(style);
+      }
+
+      return true;
+    })
+    .catch(error => {
+      console.error('Failed to load installation service modal:', error);
+      return false;
+    });
+}
+
+function showInstallationServiceModal() {
+  return loadInstallationServiceModal().then(() => {
+    const dialog = document.querySelector('#cart-container #installation-modal');
+    if (!dialog) {
+      return;
+    }
+
+    if (dialog.open) {
+      dialog.close();
+    }
+
+    dialog.showModal();
+
+    setTimeout(() => {
+      const content = dialog.querySelector('#installation-modal-content');
+      if (content) {
+        content.classList.remove('scale-95', 'opacity-0');
+        content.classList.add('scale-100', 'opacity-100');
+      }
+    }, 10);
+
+    installationServiceModalUISetup();
+  });
+}
+
+function hideInstallationServiceModal() {
+  const dialog = document.querySelector('#cart-container #installation-modal');
+  if (dialog) {
+    const content = dialog.querySelector('#installation-modal-content');
+    if (content) {
+      content.classList.remove('scale-100', 'opacity-100');
+      content.classList.add('scale-95', 'opacity-0');
+    }
+
+    setTimeout(() => {
+      dialog.close();
+    }, 300);
+  }
+}
+
 function loadCartModal() {
+  const container = document.getElementById('cart-container');
+  if (!container) {
+    console.error('Cart container not found');
+    return Promise.resolve(false);
+  }
+
+  const existingModal = container.querySelector('#cart-modal');
+  if (existingModal) {
+    return Promise.resolve(true);
+  }
+
   return fetch('/cart-modal')
     .then(response => response.text())
     .then(html => {
-      const parser = new DOMParser()
-      const dialog = parser.parseFromString(html, 'text/html');
-      document.getElementById('cart-container').appendChild(dialog.querySelector('dialog'));
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const modal = doc.querySelector('#cart-modal');
+      const style = doc.querySelector('style');
+
+      if (modal) {
+        container.appendChild(modal);
+      }
+
+      if (style) {
+        container.appendChild(style);
+      }
+
       return true;
     })
     .catch(error => {
@@ -197,7 +320,9 @@ function loadCartModal() {
 
 function updateCartBadge() {
   const cart = getCart();
-  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+  // Exclude installation service from badge count
+  const totalItems = cart.reduce((sum, item) => 
+    item.name === INSTALLATION_SERVICE_NAME ? sum : sum + item.quantity, 0);
 
   let badge = document.getElementById('cart-badge');
   if (!badge) {
@@ -228,7 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (cartIcon) {
     cartIcon.addEventListener('click', () => {
       // Check if dialog is already loaded
-      const dialog = document.querySelector('#cart-container dialog');
+      const dialog = document.querySelector('#cart-container #cart-modal');
       if (dialog) {
         showCart();
       } else {
@@ -274,78 +399,140 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function cartModalUISetup() {
-  // Handle clear cart button
+  const modal = document.getElementById('cart-modal');
+  if (!modal || modal.dataset.bound === 'true') {
+    return;
+  }
+
+  modal.dataset.bound = 'true';
+
   const clearCartButton = document.getElementById('clear-cart');
+  const closeButton = document.getElementById('close-cart');
+  const proceedToCheckoutButton = document.getElementById('proceed-to-checkout');
+
   function handleCartClear() {
     if (confirm('Tem certeza que deseja limpar seu carrinho?')) {
-      // Clear cart directly without import
       localStorage.setItem('cart', JSON.stringify([]));
 
-      // Update badge
       const badge = document.getElementById('cart-badge');
       if (badge) {
         badge.classList.add('hidden');
       }
 
-      // Update cart display
-      const cartItemsContainer = document.getElementById('cart-items');
-      const cartTotalContainer = document.getElementById('cart-total');
-      const cartCountContainer = document.getElementById('cart-count');
-
-      if (cartItemsContainer) {
-        cartItemsContainer.innerHTML = `
-          <div class="text-center py-12">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24 mx-auto text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-            </svg>
-            <h3 class="text-lg font-semibold text-gray-700 mb-2">Seu carrinho está vazio</h3>
-            <p class="text-gray-500">Adicione alguns produtos para começar!</p>
-          </div>
-        `;
-      }
-
-      if (cartTotalContainer) {
-        cartTotalContainer.innerText = '0.00';
-      }
-
-      if (cartCountContainer) {
-        cartCountContainer.innerText = '0 itens';
-      }
+      // Use renderCart() to handle all display updates including button styling
+      renderCart();
     }
   }
 
-  const closeButton = document.getElementById('close-cart');
-  const modal = document.getElementById('cart-modal');
-  function closeOnBtnClick() {
-    closeButton?.removeEventListener('click', closeOnBtnClick);
-    modal?.removeEventListener('click', hideCartOnBackdrop);
-    modal?.removeEventListener('keydown', hideCartOnEsc);
-    clearCartButton?.removeEventListener('click', handleCartClear);
+  function handleCloseCart(event) {
+    event?.preventDefault();
     hideCart();
   }
-  function hideCartOnEsc(e) {
-    if (e.key === 'Escape') {
-      closeButton?.removeEventListener('click', closeOnBtnClick);
-      modal?.removeEventListener('click', hideCartOnBackdrop);
-      modal?.removeEventListener('keydown', hideCartOnEsc);
-      clearCartButton?.removeEventListener('click', handleCartClear);
+
+  function handleCartBackdrop(event) {
+    if (event.target === event.currentTarget) {
       hideCart();
     }
   }
-  function hideCartOnBackdrop(e) {
-    if (e.target === e.currentTarget) {
-      closeButton?.removeEventListener('click', closeOnBtnClick);
-      modal?.removeEventListener('click', hideCartOnBackdrop);
-      modal?.removeEventListener('keydown', hideCartOnEsc);
-      clearCartButton?.removeEventListener('click', handleCartClear);
-      hideCart();
+
+  function handleCartCancel(event) {
+    event.preventDefault();
+    hideCart();
+  }
+
+  function handleProceedToCheckout(event) {
+    event.preventDefault();
+    const cart = getCart();
+    const displayCart = cart.filter(item => item.name !== INSTALLATION_SERVICE_NAME);
+    
+    if (displayCart.length === 0) {
+      return; // Don't proceed if cart is empty
     }
+    
+    hideCart();
+    showInstallationServiceModal();
   }
 
   clearCartButton?.addEventListener('click', handleCartClear);
-  closeButton?.addEventListener('click', closeOnBtnClick);
-  modal?.addEventListener('keydown', hideCartOnEsc);
-  modal?.addEventListener('click', hideCartOnBackdrop);
+  closeButton?.addEventListener('click', handleCloseCart);
+  modal.addEventListener('click', handleCartBackdrop);
+  modal.addEventListener('cancel', handleCartCancel);
+  proceedToCheckoutButton?.addEventListener('click', handleProceedToCheckout);
 }
 
-export { addToCart, removeFromCart, updateQuantity, clearCart, renderCart, showCart, hideCart, updateCartBadge, cartModalUISetup };
+function installationServiceModalUISetup() {
+  const modal = document.getElementById('installation-modal');
+  if (!modal || modal.dataset.bound === 'true') {
+    return;
+  }
+
+  modal.dataset.bound = 'true';
+
+  const addInstallationBtn = document.getElementById('add-installation');
+  const skipInstallationBtn = document.getElementById('skip-installation');
+  const closeBtn = document.getElementById('close-installation');
+  let hasChosen = false;
+
+  function proceed(includeInstallation) {
+    if (hasChosen) {
+      return;
+    }
+    hasChosen = true;
+
+    if (includeInstallation) {
+      const cart = getCart();
+      const existingInstallation = cart.findIndex(item => item.name === INSTALLATION_SERVICE_NAME);
+
+      if (existingInstallation === -1) {
+        cart.push({ name: INSTALLATION_SERVICE_NAME, price: 120.00, quantity: 1 });
+      } else {
+        cart[existingInstallation].price = 120.00;
+        cart[existingInstallation].quantity = 1;
+      }
+
+      saveCart(cart);
+      updateCartBadge();
+    } else {
+      const cart = getCart();
+      const filteredCart = cart.filter(item => item.name !== INSTALLATION_SERVICE_NAME);
+
+      if (filteredCart.length !== cart.length) {
+        saveCart(filteredCart);
+        updateCartBadge();
+      }
+    }
+
+    hideInstallationServiceModal();
+    setTimeout(() => {
+      window.location.href = '/checkout';
+    }, 350);
+  }
+
+  addInstallationBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    proceed(true);
+  });
+
+  skipInstallationBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    proceed(false);
+  });
+
+  closeBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    proceed(false);
+  });
+
+  modal.addEventListener('cancel', (event) => {
+    event.preventDefault();
+    proceed(false);
+  });
+
+  modal.addEventListener('click', (event) => {
+    if (event.target === event.currentTarget) {
+      proceed(false);
+    }
+  });
+}
+
+export { addToCart, removeFromCart, updateQuantity, clearCart, renderCart, showCart, hideCart, updateCartBadge, cartModalUISetup, loadInstallationServiceModal, showInstallationServiceModal, hideInstallationServiceModal, installationServiceModalUISetup };

@@ -54,6 +54,17 @@ func main() {
 		tmpl.Execute(w, nil)
 	})
 
+	// Installation service modal route
+	http.HandleFunc("/installation-service-modal", func(w http.ResponseWriter, r *http.Request) {
+		tmpl, err := template.ParseFiles("web/templates/installation-service-modal.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		tmpl.Execute(w, nil)
+	})
+
 	// Public routes
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		tmpl, err := template.ParseFiles("web/templates/index.html")

@@ -1,6 +1,13 @@
 ## Agent Instructions
 
-This document provides guidelines for AI agents working in this repository.
+This document provides guidelines for AI agents working in this Go/HTMX/Tailwind/PostgreSQL e-commerce repository.
+
+### Tech Stack & Setup
+
+- **Backend:** Go 1.24.2 with PostgreSQL database
+- **Frontend:** HTMX + Tailwind CSS
+- **Config:** TOML files in `configs/` directory
+- **Database:** Set up PostgreSQL and update `configs/config.toml`
 
 ### Build, Lint, and Test
 
@@ -13,9 +20,9 @@ This document provides guidelines for AI agents working in this repository.
 
 ### Code Style
 
-- **Imports:** Group imports into three blocks: standard library, third-party, and internal packages.
-- **Formatting:** Use `gofmt` for all Go code.
-- **Types:** Use structs for configuration and data structures. Use type inference (`:=`) where appropriate.
-- **Naming:** Follow standard Go naming conventions (`PascalCase` for exported, `camelCase` for local).
-- **Error Handling:** Handle errors explicitly. Use `log.Fatalf` for critical errors on startup. Don't use panics.
-- **Comments:** Add comments to explain complex logic, not to restate what the code does.
+- **Imports:** Group into three blocks: standard library, third-party, internal packages
+- **Formatting:** Use `gofmt` for all Go code
+- **Types:** Use structs for config/data structures, type inference (`:=`) where appropriate
+- **Naming:** PascalCase for exported identifiers, camelCase for local variables
+- **Error Handling:** Handle errors explicitly, use `log.Fatalf` for startup failures, avoid panics
+- **Comments:** Explain complex logic only, avoid restating obvious code
