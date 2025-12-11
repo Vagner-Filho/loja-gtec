@@ -9,17 +9,29 @@ function addToCart(productName, price) {
   }
 
   saveCart(cart);
-  renderCart();
   updateCartBadge();
-  showCart();
+
+  const dialogExists = document.querySelector('#cart-container dialog');
+  if (dialogExists) {
+    showCart();
+  } else {
+    // Load modal first, then render and show
+    loadCartModal().then(() => {
+      showCart();
+    });
+  }
 }
 
 function removeFromCart(productName) {
   let cart = getCart();
   cart = cart.filter(item => item.name !== productName);
   saveCart(cart);
-  renderCart();
   updateCartBadge();
+
+  const dialogExists = document.querySelector('#cart-container dialog');
+  if (dialogExists) {
+    renderCart();
+  }
 }
 
 function updateQuantity(productName, delta) {
@@ -32,15 +44,23 @@ function updateQuantity(productName, delta) {
       cart.splice(productIndex, 1);
     }
     saveCart(cart);
-    renderCart();
     updateCartBadge();
+
+    const dialogExists = document.querySelector('#cart-container dialog');
+    if (dialogExists) {
+      renderCart();
+    }
   }
 }
 
 function clearCart() {
   saveCart([]);
-  renderCart();
   updateCartBadge();
+
+  const dialogExists = document.querySelector('#cart-container dialog');
+  if (dialogExists) {
+    renderCart();
+  }
 }
 
 function getCart() {
@@ -55,8 +75,13 @@ function renderCart() {
   const cartItemsContainer = document.getElementById('cart-items');
   const cartTotalContainer = document.getElementById('cart-total');
   const cartCountContainer = document.getElementById('cart-count');
+
+  // Early return if cart elements don't exist yet
+  if (!cartItemsContainer || !cartTotalContainer) {
+    return;
+  }
+
   const cart = getCart();
-  
   cartItemsContainer.innerHTML = '';
   let total = 0;
   let totalItems = 0;
@@ -120,37 +145,60 @@ function renderCart() {
 }
 
 function showCart() {
-  const cartModal = document.getElementById('cart-modal');
-  const cartModalContent = document.getElementById('cart-modal-content');
-  
-  cartModal.classList.remove('hidden');
-  
-  // Trigger animation
-  setTimeout(() => {
-    cartModal.classList.remove('opacity-0');
-    cartModalContent.classList.remove('scale-95', 'opacity-0');
-    cartModalContent.classList.add('scale-100', 'opacity-100');
-  }, 10);
+  const dialog = document.querySelector('#cart-container dialog');
+  if (dialog) {
+    dialog.showModal();
+    renderCart(); // Render after showing
+    // Trigger animation
+    setTimeout(() => {
+      const content = dialog.querySelector('#cart-modal-content');
+      if (content) {
+        content.classList.remove('scale-95', 'opacity-0');
+        content.classList.add('scale-100', 'opacity-100');
+      }
+    }, 10);
+    cartModalUISetup();
+  } else {
+    // Load modal first, then show
+    loadCartModal().then(() => showCart());
+  }
 }
 
 function hideCart() {
-  const cartModal = document.getElementById('cart-modal');
-  const cartModalContent = document.getElementById('cart-modal-content');
-  
-  // Animate out
-  cartModal.classList.add('opacity-0');
-  cartModalContent.classList.remove('scale-100', 'opacity-100');
-  cartModalContent.classList.add('scale-95', 'opacity-0');
-  
-  setTimeout(() => {
-    cartModal.classList.add('hidden');
-  }, 300);
+  const dialog = document.querySelector('#cart-container dialog');
+  if (dialog) {
+    // Animate out
+    const content = dialog.querySelector('#cart-modal-content');
+    if (content) {
+      content.classList.remove('scale-100', 'opacity-100');
+      content.classList.add('scale-95', 'opacity-0');
+    }
+
+    setTimeout(() => {
+      dialog.close();
+    }, 300);
+  }
+}
+
+function loadCartModal() {
+  return fetch('/cart-modal')
+    .then(response => response.text())
+    .then(html => {
+      const parser = new DOMParser()
+      const dialog = parser.parseFromString(html, 'text/html');
+      document.getElementById('cart-container').appendChild(dialog.querySelector('dialog'));
+      return true;
+    })
+    .catch(error => {
+      console.error('Failed to load cart modal:', error);
+      return false;
+    });
 }
 
 function updateCartBadge() {
   const cart = getCart();
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-  
+
   let badge = document.getElementById('cart-badge');
   if (!badge) {
     badge = document.createElement('span');
@@ -162,7 +210,7 @@ function updateCartBadge() {
       cartIcon.parentElement.appendChild(badge);
     }
   }
-  
+
   if (totalItems > 0) {
     badge.textContent = totalItems;
     badge.classList.remove('hidden');
@@ -172,44 +220,26 @@ function updateCartBadge() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  renderCart();
+  // Don't call renderCart() here - it will be called when modal loads
   updateCartBadge();
 
+  // Cart icon click is now handled by HTMX, but we need to show the dialog after it loads
   const cartIcon = document.getElementById('cart-icon');
   if (cartIcon) {
-    cartIcon.addEventListener('click', showCart);
-  }
-
-  const closeCartButton = document.getElementById('close-cart');
-  if (closeCartButton) {
-    closeCartButton.addEventListener('click', hideCart);
-  }
-
-  const clearCartButton = document.getElementById('clear-cart');
-  if (clearCartButton) {
-    clearCartButton.addEventListener('click', () => {
-      if (confirm('Tem certeza que deseja limpar seu carrinho?')) {
-        clearCart();
+    cartIcon.addEventListener('click', () => {
+      // Check if dialog is already loaded
+      const dialog = document.querySelector('#cart-container dialog');
+      if (dialog) {
+        showCart();
+      } else {
+        // HTMX will load the dialog, then we show it
+        setTimeout(showCart, 100);
       }
     });
   }
 
-  // Close modal when clicking on backdrop
-  const cartModal = document.getElementById('cart-modal');
-  if (cartModal) {
-    cartModal.addEventListener('click', (e) => {
-      if (e.target === cartModal) {
-        hideCart();
-      }
-    });
-  }
-
-  // Close modal on Escape key
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !cartModal.classList.contains('hidden')) {
-      hideCart();
-    }
-  });
+  // Event listeners will be handled by the dialog's own script
+  // but we keep fallbacks for when the dialog isn't loaded yet
 
   document.querySelectorAll('.add-to-cart').forEach(button => {
     button.addEventListener('click', (e) => {
@@ -221,22 +251,101 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Event delegation for dynamically created buttons
-  document.getElementById('cart-items').addEventListener('click', (e) => {
-    const removeBtn = e.target.closest('.remove-item');
-    const increaseBtn = e.target.closest('.increase-qty');
-    const decreaseBtn = e.target.closest('.decrease-qty');
+  // This works both in the main page and in the dialog
+  document.addEventListener('click', (e) => {
+    const cartItems = document.getElementById('cart-items');
+    if (cartItems && cartItems.contains(e.target)) {
+      const removeBtn = e.target.closest('.remove-item');
+      const increaseBtn = e.target.closest('.increase-qty');
+      const decreaseBtn = e.target.closest('.decrease-qty');
 
-    if (removeBtn) {
-      const productName = removeBtn.dataset.name;
-      removeFromCart(productName);
-    } else if (increaseBtn) {
-      const productName = increaseBtn.dataset.name;
-      updateQuantity(productName, 1);
-    } else if (decreaseBtn) {
-      const productName = decreaseBtn.dataset.name;
-      updateQuantity(productName, -1);
+      if (removeBtn) {
+        const productName = removeBtn.dataset.name;
+        removeFromCart(productName);
+      } else if (increaseBtn) {
+        const productName = increaseBtn.dataset.name;
+        updateQuantity(productName, 1);
+      } else if (decreaseBtn) {
+        const productName = decreaseBtn.dataset.name;
+        updateQuantity(productName, -1);
+      }
     }
   });
 });
 
-export { addToCart, removeFromCart, updateQuantity, clearCart, renderCart, showCart, hideCart, updateCartBadge };
+function cartModalUISetup() {
+  // Handle clear cart button
+  const clearCartButton = document.getElementById('clear-cart');
+  function handleCartClear() {
+    if (confirm('Tem certeza que deseja limpar seu carrinho?')) {
+      // Clear cart directly without import
+      localStorage.setItem('cart', JSON.stringify([]));
+
+      // Update badge
+      const badge = document.getElementById('cart-badge');
+      if (badge) {
+        badge.classList.add('hidden');
+      }
+
+      // Update cart display
+      const cartItemsContainer = document.getElementById('cart-items');
+      const cartTotalContainer = document.getElementById('cart-total');
+      const cartCountContainer = document.getElementById('cart-count');
+
+      if (cartItemsContainer) {
+        cartItemsContainer.innerHTML = `
+          <div class="text-center py-12">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24 mx-auto text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
+            <h3 class="text-lg font-semibold text-gray-700 mb-2">Seu carrinho está vazio</h3>
+            <p class="text-gray-500">Adicione alguns produtos para começar!</p>
+          </div>
+        `;
+      }
+
+      if (cartTotalContainer) {
+        cartTotalContainer.innerText = '0.00';
+      }
+
+      if (cartCountContainer) {
+        cartCountContainer.innerText = '0 itens';
+      }
+    }
+  }
+
+  const closeButton = document.getElementById('close-cart');
+  const modal = document.getElementById('cart-modal');
+  function closeOnBtnClick() {
+    closeButton?.removeEventListener('click', closeOnBtnClick);
+    modal?.removeEventListener('click', hideCartOnBackdrop);
+    modal?.removeEventListener('keydown', hideCartOnEsc);
+    clearCartButton?.removeEventListener('click', handleCartClear);
+    hideCart();
+  }
+  function hideCartOnEsc(e) {
+    if (e.key === 'Escape') {
+      closeButton?.removeEventListener('click', closeOnBtnClick);
+      modal?.removeEventListener('click', hideCartOnBackdrop);
+      modal?.removeEventListener('keydown', hideCartOnEsc);
+      clearCartButton?.removeEventListener('click', handleCartClear);
+      hideCart();
+    }
+  }
+  function hideCartOnBackdrop(e) {
+    if (e.target === e.currentTarget) {
+      closeButton?.removeEventListener('click', closeOnBtnClick);
+      modal?.removeEventListener('click', hideCartOnBackdrop);
+      modal?.removeEventListener('keydown', hideCartOnEsc);
+      clearCartButton?.removeEventListener('click', handleCartClear);
+      hideCart();
+    }
+  }
+
+  clearCartButton?.addEventListener('click', handleCartClear);
+  closeButton?.addEventListener('click', closeOnBtnClick);
+  modal?.addEventListener('keydown', hideCartOnEsc);
+  modal?.addEventListener('click', hideCartOnBackdrop);
+}
+
+export { addToCart, removeFromCart, updateQuantity, clearCart, renderCart, showCart, hideCart, updateCartBadge, cartModalUISetup };

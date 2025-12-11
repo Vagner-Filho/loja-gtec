@@ -43,6 +43,17 @@ func main() {
 	fs := http.FileServer(http.Dir("web/static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
+	// Cart modal route (must be before catch-all "/")
+	http.HandleFunc("/cart-modal", func(w http.ResponseWriter, r *http.Request) {
+		tmpl, err := template.ParseFiles("web/templates/cart-modal.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		tmpl.Execute(w, nil)
+	})
+
 	// Public routes
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		tmpl, err := template.ParseFiles("web/templates/index.html")
