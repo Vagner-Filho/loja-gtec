@@ -267,6 +267,12 @@ function handleCheckout(e) {
     isValid = false;
   }
 
+  // Validate that address is in Campo Grande, MS
+  if (!validateCampoGrandeAddress(city, state)) {
+    showError(document.getElementById('city'), 'Atendemos apenas clientes em Campo Grande, MS');
+    isValid = false;
+  }
+
   if (!zipCode) {
     showError(document.getElementById('zipCode'), 'CEP é obrigatório');
     isValid = false;
@@ -402,6 +408,13 @@ function validateCPF(cpf) {
   return cleaned.length === 11 || cleaned.length === 14;
 }
 
+// Validate Campo Grande address
+function validateCampoGrandeAddress(city, state) {
+  const isValidCity = city.toLowerCase() === 'campo grande';
+  const isValidState = state.toUpperCase() === 'MS';
+  return isValidCity && isValidState;
+}
+
 // Format CEP
 function formatCEP(value) {
   const cleaned = value.replace(/\D/g, '');
@@ -434,16 +447,27 @@ async function fetchAddressByCEP(cep) {
     // Check if CEP was found
     if (data.erro) {
       showError(zipCodeInput, 'CEP não encontrado');
-      // Clear address fields
+      // Clear address fields but keep defaults for city/state
       addressInput.value = '';
       neighborhoodInput.value = '';
-      cityInput.value = '';
-      stateInput.value = '';
+      cityInput.value = 'Campo Grande';
+      stateInput.value = 'MS';
       return;
     }
     
     // Clear any existing errors
     clearError(zipCodeInput);
+    
+    // Validate that address is in Campo Grande, MS
+    if (!validateCampoGrandeAddress(data.localidade || '', data.uf || '')) {
+      showError(zipCodeInput, 'Atendemos apenas clientes em Campo Grande, MS');
+      // Clear address fields but keep defaults for city/state
+      addressInput.value = '';
+      neighborhoodInput.value = '';
+      cityInput.value = 'Campo Grande';
+      stateInput.value = 'MS';
+      return;
+    }
     
     // Populate address fields
     if (data.logradouro) {
@@ -456,15 +480,11 @@ async function fetchAddressByCEP(cep) {
       clearError(neighborhoodInput);
     }
     
-    if (data.localidade) {
-      cityInput.value = data.localidade;
-      clearError(cityInput);
-    }
-    
-    if (data.uf) {
-      stateInput.value = data.uf;
-      clearError(stateInput);
-    }
+    // Keep city and state as Campo Grande, MS regardless of ViaCEP response
+    cityInput.value = 'Campo Grande';
+    stateInput.value = 'MS';
+    clearError(cityInput);
+    clearError(stateInput);
     
   } catch (error) {
     // Clear loading state
@@ -474,11 +494,11 @@ async function fetchAddressByCEP(cep) {
     showError(zipCodeInput, 'Erro ao buscar CEP. Tente novamente.');
     console.error('ViaCEP API error:', error);
     
-    // Clear address fields on error
+    // Clear address fields on error but keep defaults for city/state
     addressInput.value = '';
     neighborhoodInput.value = '';
-    cityInput.value = '';
-    stateInput.value = '';
+    cityInput.value = 'Campo Grande';
+    stateInput.value = 'MS';
   }
 }
 
@@ -541,16 +561,41 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Only clear if the fields were previously filled by ViaCEP
         // (check if they're currently filled and user is now editing CEP)
-        if (addressInput.value && neighborhoodInput.value && cityInput.value && stateInput.value) {
+        if (addressInput.value && neighborhoodInput.value) {
           addressInput.value = '';
           neighborhoodInput.value = '';
-          cityInput.value = '';
-          stateInput.value = '';
         }
+        // Always reset city/state to defaults
+        cityInput.value = 'Campo Grande';
+        stateInput.value = 'MS';
         
         // Clear any CEP-related errors
         clearError(zipCodeInput);
       }
+    });
+  }
+
+  // Prevent manual editing of city and state fields
+  const cityInput = document.getElementById('city');
+  const stateInput = document.getElementById('state');
+  
+  if (cityInput) {
+    cityInput.addEventListener('input', (e) => {
+      e.target.value = 'Campo Grande';
+    });
+    
+    cityInput.addEventListener('focus', (e) => {
+      e.target.select();
+    });
+  }
+  
+  if (stateInput) {
+    stateInput.addEventListener('input', (e) => {
+      e.target.value = 'MS';
+    });
+    
+    stateInput.addEventListener('focus', (e) => {
+      e.target.select();
     });
   }
 
