@@ -1,3 +1,5 @@
+const INSTALLATION_SERVICE_NAME = 'Serviço de Instalação';
+
 // Import cart functions
 function getCart() {
   return JSON.parse(localStorage.getItem('cart')) || [];
@@ -134,9 +136,6 @@ function renderCheckoutItems() {
   const cart = getCart();
   const checkoutItemsContainer = document.getElementById('checkout-items');
   const emptyCartMessage = document.getElementById('empty-cart-message');
-  const subtotalElement = document.getElementById('subtotal');
-  const shippingElement = document.getElementById('shipping');
-  const taxElement = document.getElementById('tax');
   const totalElement = document.getElementById('total');
   const placeOrderBtn = document.getElementById('place-order-btn');
 
@@ -157,25 +156,27 @@ function renderCheckoutItems() {
   cart.forEach(item => {
     const itemElement = document.createElement('div');
     itemElement.className = 'flex justify-between items-start pb-4 border-b border-gray-200';
-    itemElement.innerHTML = `
-      <div class="flex-1">
-        <h4 class="font-semibold text-gray-900">${item.name}</h4>
-        <p class="text-sm text-gray-500">Quantidade: ${item.quantity}</p>
-      </div>
-      <p class="font-semibold text-gray-900">R$ ${(item.price * item.quantity).toFixed(2)}</p>
-    `;
+    if (item.name !== INSTALLATION_SERVICE_NAME) {
+      itemElement.innerHTML = `
+        <div class="flex-1">
+          <h4 class="font-semibold text-gray-900">${item.name}</h4>
+          <p class="text-sm text-gray-500">Quantidade: ${item.quantity}</p>
+        </div>
+        <p class="font-semibold text-gray-900">R$ ${(item.price * item.quantity).toFixed(2)}</p>
+      `
+    } else {
+      itemElement.innerHTML = `
+        <div class="flex-1">
+          <h4 class="font-semibold text-gray-900">${item.name}</h4>
+        </div>
+        <p class="font-semibold text-gray-900">R$ ${item.price.toFixed(2)}</p>
+      `;
+    }
     checkoutItemsContainer.appendChild(itemElement);
     subtotal += item.price * item.quantity;
   });
 
-  const shipping = cart.length > 0 ? 10.00 : 0;
-  const tax = subtotal * 0.08; // 8% tax
-  const total = subtotal + shipping + tax;
-
-  subtotalElement.textContent = subtotal.toFixed(2);
-  shippingElement.textContent = shipping.toFixed(2);
-  taxElement.textContent = tax.toFixed(2);
-  totalElement.textContent = total.toFixed(2);
+  totalElement.textContent = subtotal.toFixed(2);
 }
 
 // Generate order number
