@@ -196,6 +196,7 @@ function handleCheckout(e) {
   const firstName = document.getElementById('firstName').value.trim();
   const lastName = document.getElementById('lastName').value.trim();
   const address = document.getElementById('address').value.trim();
+  const neighborhood = document.getElementById('neighborhood').value.trim();
   const city = document.getElementById('city').value.trim();
   const state = document.getElementById('state').value.trim();
   const zipCode = document.getElementById('zipCode').value.trim();
@@ -248,6 +249,11 @@ function handleCheckout(e) {
   // Validate address
   if (!address) {
     showError(document.getElementById('address'), 'Endereço é obrigatório');
+    isValid = false;
+  }
+
+  if (!neighborhood) {
+    showError(document.getElementById('neighborhood'), 'Bairro é obrigatório');
     isValid = false;
   }
 
@@ -396,6 +402,86 @@ function validateCPF(cpf) {
   return cleaned.length === 11 || cleaned.length === 14;
 }
 
+// Format CEP
+function formatCEP(value) {
+  const cleaned = value.replace(/\D/g, '');
+  if (cleaned.length <= 5) {
+    return cleaned;
+  }
+  return cleaned.slice(0, 5) + '-' + cleaned.slice(5, 8);
+}
+
+// Fetch address by CEP using ViaCEP API
+async function fetchAddressByCEP(cep) {
+  const zipCodeInput = document.getElementById('zipCode');
+  const addressInput = document.getElementById('address');
+  const neighborhoodInput = document.getElementById('neighborhood');
+  const cityInput = document.getElementById('city');
+  const stateInput = document.getElementById('state');
+  
+  // Show loading state
+  zipCodeInput.classList.add('border-blue-500', 'bg-blue-50');
+  zipCodeInput.classList.remove('border-gray-300');
+  
+  try {
+    const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+    const data = await response.json();
+    
+    // Clear loading state
+    zipCodeInput.classList.remove('border-blue-500', 'bg-blue-50');
+    zipCodeInput.classList.add('border-gray-300');
+    
+    // Check if CEP was found
+    if (data.erro) {
+      showError(zipCodeInput, 'CEP não encontrado');
+      // Clear address fields
+      addressInput.value = '';
+      neighborhoodInput.value = '';
+      cityInput.value = '';
+      stateInput.value = '';
+      return;
+    }
+    
+    // Clear any existing errors
+    clearError(zipCodeInput);
+    
+    // Populate address fields
+    if (data.logradouro) {
+      addressInput.value = data.logradouro;
+      clearError(addressInput);
+    }
+    
+    if (data.bairro) {
+      neighborhoodInput.value = data.bairro;
+      clearError(neighborhoodInput);
+    }
+    
+    if (data.localidade) {
+      cityInput.value = data.localidade;
+      clearError(cityInput);
+    }
+    
+    if (data.uf) {
+      stateInput.value = data.uf;
+      clearError(stateInput);
+    }
+    
+  } catch (error) {
+    // Clear loading state
+    zipCodeInput.classList.remove('border-blue-500', 'bg-blue-50');
+    zipCodeInput.classList.add('border-gray-300');
+    
+    showError(zipCodeInput, 'Erro ao buscar CEP. Tente novamente.');
+    console.error('ViaCEP API error:', error);
+    
+    // Clear address fields on error
+    addressInput.value = '';
+    neighborhoodInput.value = '';
+    cityInput.value = '';
+    stateInput.value = '';
+  }
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   renderCheckoutItems();
@@ -430,6 +516,41 @@ document.addEventListener('DOMContentLoaded', () => {
   if (cpfInput) {
     cpfInput.addEventListener('input', (e) => {
       e.target.value = formatCPF(e.target.value);
+    });
+  }
+
+  // CEP formatting and ViaCEP integration
+  const zipCodeInput = document.getElementById('zipCode');
+  if (zipCodeInput) {
+    zipCodeInput.addEventListener('input', (e) => {
+      const originalValue = e.target.value;
+      const cleanedCEP = originalValue.replace(/\D/g, '');
+      
+      // Format CEP in real-time
+      e.target.value = formatCEP(originalValue);
+      
+      // Trigger API call when CEP reaches 8 digits
+      if (cleanedCEP.length === 8) {
+        fetchAddressByCEP(cleanedCEP);
+      } else if (cleanedCEP.length < 8) {
+        // Clear address fields if CEP becomes incomplete
+        const addressInput = document.getElementById('address');
+        const neighborhoodInput = document.getElementById('neighborhood');
+        const cityInput = document.getElementById('city');
+        const stateInput = document.getElementById('state');
+        
+        // Only clear if the fields were previously filled by ViaCEP
+        // (check if they're currently filled and user is now editing CEP)
+        if (addressInput.value && neighborhoodInput.value && cityInput.value && stateInput.value) {
+          addressInput.value = '';
+          neighborhoodInput.value = '';
+          cityInput.value = '';
+          stateInput.value = '';
+        }
+        
+        // Clear any CEP-related errors
+        clearError(zipCodeInput);
+      }
     });
   }
 
