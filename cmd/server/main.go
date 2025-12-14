@@ -16,6 +16,7 @@ import (
 
 	"lojagtec/internal/admin"
 	"lojagtec/internal/database"
+	"lojagtec/internal/orders"
 	"lojagtec/internal/products"
 )
 
@@ -34,6 +35,7 @@ func main() {
 	// Set database for packages
 	products.SetDatabase(db)
 	admin.SetDatabase(db)
+	orders.SetDatabase(db)
 
 	// Ensure upload directory exists
 	if err := os.MkdirAll(uploadPath, 0755); err != nil {
@@ -86,6 +88,104 @@ func main() {
 		tmpl.Execute(w, nil)
 	})
 
+	// Checkout endpoint for order processing
+	http.HandleFunc("/api/checkout", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Parse form data
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "Invalid form data", http.StatusBadRequest)
+			return
+		}
+
+		// Create checkout form from request data
+		form := orders.CheckoutForm{
+			Email:         r.FormValue("email"),
+			Phone:         r.FormValue("phone"),
+			FirstName:     r.FormValue("firstName"),
+			LastName:      r.FormValue("lastName"),
+			Address:       r.FormValue("address"),
+			Neighborhood:  r.FormValue("neighborhood"),
+			City:          r.FormValue("city"),
+			State:         r.FormValue("state"),
+			ZipCode:       r.FormValue("zipCode"),
+			Apartment:     r.FormValue("apartment"),
+			PaymentMethod: r.FormValue("paymentMethod"),
+			CardName:      r.FormValue("cardName"),
+			CardNumber:    r.FormValue("cardNumber"),
+			Expiry:        r.FormValue("expiry"),
+			CVV:           r.FormValue("cvv"),
+			CPF:           r.FormValue("cpf"),
+			PixKey:        r.FormValue("pixKey"),
+		}
+
+		// Parse cart items from form data
+		cartData := r.FormValue("cart_items")
+		if cartData == "" {
+			// Return error for empty cart
+			tmpl, err := template.ParseFiles("web/templates/validation-error.html")
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			tmpl.Execute(w, orders.ValidationError{Field: "cart", Message: "Seu carrinho está vazio"})
+			return
+		}
+
+		if err := json.Unmarshal([]byte(cartData), &form.CartItems); err != nil {
+			http.Error(w, "Invalid cart data", http.StatusBadRequest)
+			return
+		}
+
+		// Validate the form
+		result := orders.ValidateCheckoutForm(form)
+		if !result.IsValid {
+			// Return validation errors
+			tmpl, err := template.ParseFiles("web/templates/validation-error.html")
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			tmpl.Execute(w, result.Errors[0])
+			return
+		}
+
+		// Create the order
+		order, err := orders.CreateOrder(form)
+		if err != nil {
+			tmpl, parseErr := template.ParseFiles("web/templates/validation-error.html")
+			if parseErr != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			tmpl.Execute(w, orders.ValidationError{Field: "general", Message: "Erro ao processar pedido: " + err.Error()})
+			return
+		}
+
+		// TODO: Process payment with Stripe here
+		// For now, we'll mark as paid for demo purposes
+		err = orders.UpdateOrderPaymentStatus(order.ID, "paid", "demo_payment_id")
+		if err != nil {
+			log.Printf("Failed to update payment status: %v", err)
+		}
+
+		// Return success response with order details
+		w.Header().Set("Content-Type", "text/html")
+		tmpl, err := template.ParseFiles("web/templates/checkout-success.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Execute template with order data
+		tmpl.Execute(w, map[string]interface{}{
+			"Order": order,
+		})
+	})
+
 	// Product filter routes
 	http.HandleFunc("/products/bebedouros", func(w http.ResponseWriter, r *http.Request) {
 		tmpl, err := template.ParseFiles("web/templates/product-cards.html")
@@ -99,6 +199,7 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
 		tmpl.Execute(w, prods)
 	})
 

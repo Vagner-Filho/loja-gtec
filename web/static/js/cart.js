@@ -1,11 +1,11 @@
-function addToCart(productName, price) {
+function addToCart(productName, price, id) {
   const cart = getCart();
   const productIndex = cart.findIndex(item => item.name === productName);
 
   if (productIndex > -1) {
     cart[productIndex].quantity += 1;
   } else {
-    cart.push({ name: productName, price: price, quantity: 1 });
+    cart.push({ id: Number(id), name: productName, price: price, quantity: 1 });
   }
 
   saveCart(cart);
@@ -87,7 +87,7 @@ function renderCart() {
   const cart = getCart();
   // Filter out installation service for display and calculations
   const displayCart = cart.filter(item => item.name !== INSTALLATION_SERVICE_NAME);
-  
+
   cartItemsContainer.innerHTML = '';
   let total = 0;
   let totalItems = 0;
@@ -321,7 +321,7 @@ function loadCartModal() {
 function updateCartBadge() {
   const cart = getCart();
   // Exclude installation service from badge count
-  const totalItems = cart.reduce((sum, item) => 
+  const totalItems = cart.reduce((sum, item) =>
     item.name === INSTALLATION_SERVICE_NAME ? sum : sum + item.quantity, 0);
 
   let badge = document.getElementById('cart-badge');
@@ -370,8 +370,9 @@ document.addEventListener('DOMContentLoaded', () => {
     button.addEventListener('click', (e) => {
       const productCard = e.target.closest('.product-card');
       const productName = productCard.dataset.name;
+      const productId = productCard.dataset.id;
       const productPrice = parseFloat(productCard.dataset.price);
-      addToCart(productName, productPrice);
+      addToCart(productName, productPrice, productId);
     });
   });
 
@@ -444,11 +445,11 @@ function cartModalUISetup() {
     event.preventDefault();
     const cart = getCart();
     const displayCart = cart.filter(item => item.name !== INSTALLATION_SERVICE_NAME);
-    
+
     if (displayCart.length === 0) {
       return; // Don't proceed if cart is empty
     }
-    
+
     hideCart();
     showInstallationServiceModal();
   }

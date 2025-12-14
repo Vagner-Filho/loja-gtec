@@ -1,5 +1,5 @@
 {{range .}}
-<div class="bg-white rounded-lg shadow-md overflow-hidden product-card {{if not .IsAvailable}}opacity-75{{end}}" data-name="{{.Name}}" data-price="{{.Price}}" data-available="{{.IsAvailable}}">
+<div class="bg-white rounded-lg shadow-md overflow-hidden product-card {{if not .IsAvailable}}opacity-75{{end}}" data-name="{{.Name}}" data-price="{{.Price}}" data-available="{{.IsAvailable}}" data-id="{{ .ID }}">
   <img src="{{.Image}}" alt="{{.Name}}" class="w-full h-64 object-contain">
   <div class="p-4">
     <h3 class="text-xl font-bold mb-2">{{.Name}}</h3>
@@ -19,8 +19,9 @@
     button.addEventListener('click', (e) => {
       const productCard = e.target.closest('.product-card');
       const productName = productCard.dataset.name;
+      const productId = productCard.dataset.id;
       const productPrice = parseFloat(productCard.dataset.price);
-      addToCart(productName, productPrice);
+      addToCart(productName, productPrice, productId);
     });
   });
   </script>

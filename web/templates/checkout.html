@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finalizar Compra - Lojagtec</title>
     <link href="/static/css/dist/style.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js" integrity="sha384-/TgkGk7p307TH7EXJDuUlgG3Ce1UVolAOFopFekQkkXihi5u/6OCvVKyz1W+idaz" crossorigin="anonymous"></script>
   </head>
   <body class="bg-gray-100 text-gray-800">
     <header class="bg-white shadow-md">
@@ -36,7 +37,13 @@
       </div>
 
       <!-- Checkout Form (Hidden on success) -->
-      <div id="checkout-form" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div id="checkout-form">
+        <form id="main-checkout-form"
+              class="grid grid-cols-1 lg:grid-cols-3 gap-8"
+              hx-post="/api/checkout"
+              hx-target="#checkout-form"
+              hx-vals="js:{cart_items: localStorage.getItem('cart')}"
+        >
         <!-- Left Column - Forms -->
         <div class="lg:col-span-2 space-y-6">
           <!-- Contact Information -->
@@ -48,12 +55,15 @@
                 <input type="email" id="email" name="email" required
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   placeholder="seu@email.com">
+                <div class="error-message-container"></div>
               </div>
               <div>
                 <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">Telefone</label>
                 <input type="tel" id="phone" name="phone" required
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="(11) 98765-4321">
+                  placeholder="(67) 98765-4321"
+                  >
+                <div class="error-message-container"></div>
               </div>
             </div>
           </div>
@@ -76,6 +86,7 @@
                   <input type="text" id="zipCode" name="zipCode" required
                     class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     placeholder="01310-100">
+                  <div class="error-message-container"></div>
                 </div>
                 <div>
                   <label for="city" class="block text-sm font-medium text-gray-700 mb-2">Cidade</label>
@@ -90,30 +101,34 @@
               </div>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label for="firstName" class="block text-sm font-medium text-gray-700 mb-2">Nome</label>
-                  <input type="text" id="firstName" name="firstName" required
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    placeholder="João">
-                </div>
-                <div>
-                  <label for="lastName" class="block text-sm font-medium text-gray-700 mb-2">Sobrenome</label>
-                  <input type="text" id="lastName" name="lastName" required
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    placeholder="Silva">
-                </div>
-              </div>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
                   <label for="address" class="block text-sm font-medium text-gray-700 mb-2">Endereço</label>
                   <input type="text" id="address" name="address" required
                     class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     placeholder="Rua Principal, 123">
+                  <div class="error-message-container"></div>
                 </div>
                 <div>
                   <label for="neighborhood" class="block text-sm font-medium text-gray-700 mb-2">Bairro</label>
                   <input type="text" id="neighborhood" name="neighborhood" required
                     class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     placeholder="Centro">
+                  <div class="error-message-container"></div>
+                </div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label for="firstName" class="block text-sm font-medium text-gray-700 mb-2">Nome</label>
+                  <input type="text" id="firstName" name="firstName" required
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    placeholder="João">
+                  <div class="error-message-container"></div>
+                </div>
+                <div>
+                  <label for="lastName" class="block text-sm font-medium text-gray-700 mb-2">Sobrenome</label>
+                  <input type="text" id="lastName" name="lastName" required
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    placeholder="Silva">
+                  <div class="error-message-container"></div>
                 </div>
               </div>
               <div>
@@ -150,7 +165,7 @@
                   <span class="font-medium">Boleto</span>
                 </div>
               </label>
-              
+
               <label class="payment-option cursor-pointer">
                 <input type="radio" name="paymentMethod" value="pix" class="hidden payment-radio">
                 <div class="border-2 border-gray-200 rounded-lg p-4 text-center hover:border-blue-500 transition-colors payment-option-card">
@@ -163,30 +178,34 @@
             </div>
 
             <!-- Credit Card Form -->
-            <div id="credit_card-form" class="payment-form space-y-4">
+            <fieldset id="credit_card-form" class="payment-form space-y-4">
               <h3 class="text-lg font-semibold mb-4">Informações do Cartão de Crédito</h3>
               <div>
                 <label for="cardName" class="block text-sm font-medium text-gray-700 mb-2">Nome no Cartão</label>
                 <input type="text" id="cardName" name="cardName" required
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   placeholder="João Silva">
+                <div class="error-message-container"></div>
               </div>
               <div>
                 <label for="cardNumber" class="block text-sm font-medium text-gray-700 mb-2">Número do Cartão</label>
                 <input type="text" id="cardNumber" name="cardNumber" required maxlength="19"
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   placeholder="0000 0000 0000 0000">
+                <div class="error-message-container"></div>
               </div>
               <div class="grid grid-cols-2 gap-4">
                 <div>
                   <label for="expiry" class="block text-sm font-medium text-gray-700 mb-2">Data de Validade</label>
                   <input type="text" id="expiry" name="expiry" required maxlength="5" placeholder="MM/AA"
                     class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                  <div class="error-message-container"></div>
                 </div>
                 <div>
                   <label for="cvv" class="block text-sm font-medium text-gray-700 mb-2">CVV</label>
                   <input type="text" id="cvv" name="cvv" required maxlength="4" placeholder="123"
                     class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                  <div class="error-message-container"></div>
                 </div>
               </div>
               <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
@@ -197,10 +216,10 @@
                   Pagamento seguro com criptografia SSL
                 </p>
               </div>
-            </div>
+            </fieldset>
 
             <!-- Boleto Form -->
-            <div id="boleto-form" class="payment-form hidden space-y-4">
+            <fieldset id="boleto-form" class="payment-form hidden space-y-4">
               <h3 class="text-lg font-semibold mb-4">Informações do Boleto</h3>
               <div class="bg-green-50 border border-green-200 rounded-lg p-4">
                 <div class="flex items-start">
@@ -221,18 +240,18 @@
               <div>
                 <label for="cpf" class="block text-sm font-medium text-gray-700 mb-2">CPF/CNPJ</label>
                 <input type="text" id="cpf" name="cpf" required
-                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="000.000.000-00">
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                <div class="error-message-container"></div>
               </div>
               <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                 <p class="text-sm text-yellow-700">
                   <strong>Atenção:</strong> O pagamento do boleto leva até 3 dias úteis para ser processado.
                 </p>
               </div>
-            </div>
+            </fieldset>
 
             <!-- PIX Form -->
-            <div id="pix-form" class="payment-form hidden space-y-4">
+            <fieldset id="pix-form" class="payment-form hidden space-y-4">
               <h3 class="text-lg font-semibold mb-4">Informações do PIX</h3>
               <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
                 <div class="flex items-start">
@@ -253,15 +272,15 @@
               <div>
                 <label for="pixKey" class="block text-sm font-medium text-gray-700 mb-2">Chave PIX (CPF/CNPJ/Telefone/Email)</label>
                 <input type="text" id="pixKey" name="pixKey" required
-                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="seu@email.com ou 000.000.000-00">
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                <div class="error-message-container"></div>
               </div>
               <div class="bg-green-50 border border-green-200 rounded-lg p-3">
                 <p class="text-sm text-green-700">
                   <strong>Benefício:</strong> O pagamento PIX é processado instantaneamente, então seu pedido é enviado mais rápido!
                 </p>
               </div>
-            </div>
+            </fieldset>
           </div>
         </div>
 
@@ -303,6 +322,7 @@
             </p>
           </div>
         </div>
+        </form>
       </div>
     </main>
 

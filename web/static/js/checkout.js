@@ -40,95 +40,170 @@ function formatExpiry(value) {
   return v;
 }
 
-// Validate email
-function validateEmail(email) {
-  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return re.test(email);
+// Format CPF/CNPJ
+function formatCPF(value) {
+  const cleaned = value.replace(/\D/g, '');
+
+  if (cleaned.length <= 11) {
+    // CPF format: 000.000.000-00
+    return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  } else {
+    // CNPJ format: 00.000.000/0000-00
+    return cleaned.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+  }
 }
 
-// Validate phone
-function validatePhone(phone) {
-  const cleaned = phone.replace(/\D/g, '');
-  return cleaned.length >= 10;
+// Format CEP
+function formatCEP(value) {
+  const cleaned = value.replace(/\D/g, '');
+  if (cleaned.length <= 5) {
+    return cleaned;
+  }
+  return cleaned.slice(0, 5) + '-' + cleaned.slice(5, 8);
 }
 
-// Validate card number (simple Luhn algorithm)
-function validateCardNumber(cardNumber) {
-  const cleaned = cardNumber.replace(/\s/g, '');
-  if (!/^\d{13,19}$/.test(cleaned)) return false;
+// Show zip code validation error
+function showZipCodeError(message) {
+  const zipCodeInput = document.getElementById('zipCode');
+  const errorContainer = zipCodeInput.parentElement.querySelector('.error-message-container');
+  
+  // Add error styling to input
+  zipCodeInput.classList.add('border-red-500', 'bg-red-50');
+  zipCodeInput.classList.remove('border-gray-300', 'border-blue-500', 'bg-blue-50');
+  
+  // Display error message
+  errorContainer.innerHTML = `<p class="error-message text-red-500 text-sm mt-1">${message}</p>`;
+}
 
-  let sum = 0;
-  let isEven = false;
+// Clear zip code validation error
+function clearZipCodeError() {
+  const zipCodeInput = document.getElementById('zipCode');
+  const errorContainer = zipCodeInput.parentElement.querySelector('.error-message-container');
+  
+  // Remove error styling from input
+  zipCodeInput.classList.remove('border-red-500', 'bg-red-50');
+  zipCodeInput.classList.add('border-gray-300');
+  
+  // Clear error message
+  errorContainer.innerHTML = '';
+}
 
-  for (let i = cleaned.length - 1; i >= 0; i--) {
-    let digit = parseInt(cleaned.charAt(i), 10);
+// Fetch address by CEP using ViaCEP API
+async function fetchAddressByCEP(cep) {
+  const zipCodeInput = document.getElementById('zipCode');
+  const addressInput = document.getElementById('address');
+  const neighborhoodInput = document.getElementById('neighborhood');
+  const cityInput = document.getElementById('city');
+  const stateInput = document.getElementById('state');
 
-    if (isEven) {
-      digit *= 2;
-      if (digit > 9) {
-        digit -= 9;
-      }
+  // Clear any previous errors
+  clearZipCodeError();
+
+  // Show loading state
+  zipCodeInput.classList.add('border-blue-500', 'bg-blue-50');
+  zipCodeInput.classList.remove('border-gray-300');
+
+  try {
+    const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+    const data = await response.json();
+
+    // Clear loading state
+    zipCodeInput.classList.remove('border-blue-500', 'bg-blue-50');
+    zipCodeInput.classList.add('border-gray-300');
+
+    // Check if CEP was found
+    if (data.erro) {
+      // Clear address fields but keep defaults for city/state
+      addressInput.value = '';
+      neighborhoodInput.value = '';
+      cityInput.value = 'Campo Grande';
+      stateInput.value = 'MS';
+      return;
     }
 
-    sum += digit;
-    isEven = !isEven;
+    // Validate location - only serve Campo Grande, MS
+    if (data.localidade !== 'Campo Grande' || data.uf !== 'MS') {
+      showZipCodeError('Atendemos exclusivamente clientes em Campo Grande, MS');
+      
+      // Clear address fields but keep defaults for city/state
+      addressInput.value = '';
+      neighborhoodInput.value = '';
+      cityInput.value = 'Campo Grande';
+      stateInput.value = 'MS';
+      return;
+    }
+
+    // Populate address fields
+    if (data.logradouro) {
+      addressInput.value = data.logradouro;
+    }
+
+    if (data.bairro) {
+      neighborhoodInput.value = data.bairro;
+    }
+
+    // Keep city and state as Campo Grande, MS regardless of ViaCEP response
+    cityInput.value = 'Campo Grande';
+    stateInput.value = 'MS';
+
+  } catch (error) {
+    // Clear loading state
+    zipCodeInput.classList.remove('border-blue-500', 'bg-blue-50');
+    zipCodeInput.classList.add('border-gray-300');
+
+    console.error('ViaCEP API error:', error);
+
+    // Clear address fields on error but keep defaults for city/state
+    addressInput.value = '';
+    neighborhoodInput.value = '';
+    cityInput.value = 'Campo Grande';
+    stateInput.value = 'MS';
   }
-
-  return sum % 10 === 0;
 }
 
-// Validate expiry date
-function validateExpiry(expiry) {
-  const parts = expiry.split('/');
-  if (parts.length !== 2) return false;
+// Payment method switching
+function setupPaymentMethodSwitching() {
+  const paymentRadios = document.querySelectorAll('input[name="paymentMethod"]');
+  const paymentForms = document.querySelectorAll('.payment-form');
+  const paymentOptionCards = document.querySelectorAll('.payment-option-card');
 
-  const month = parseInt(parts[0], 10);
-  const year = parseInt('20' + parts[1], 10);
+  paymentRadios.forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      const selectedMethod = e.target.value;
 
-  if (month < 1 || month > 12) return false;
+      // Hide all forms
+      paymentForms.forEach(form => {
+        form.classList.add('hidden');
+        form.setAttribute('disabled', 'true');
+      });
 
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
+      // Show selected form
+      const selectedForm = document.getElementById(`${selectedMethod}-form`);
+      if (selectedForm) {
+        selectedForm.classList.remove('hidden');
+        selectedForm.removeAttribute('disabled');
+      }
 
-  if (year < currentYear) return false;
-  if (year === currentYear && month < currentMonth) return false;
+      // Update card styling
+      paymentOptionCards.forEach(card => {
+        card.classList.remove('border-blue-500', 'bg-blue-50');
+        card.classList.add('border-gray-200');
+      });
 
-  return true;
-}
+      // Highlight selected card
+      const selectedCard = e.target.closest('.payment-option').querySelector('.payment-option-card');
+      if (selectedCard) {
+        selectedCard.classList.remove('border-gray-200');
+        selectedCard.classList.add('border-blue-500', 'bg-blue-50');
+      }
+    });
+  });
 
-// Validate CVV
-function validateCVV(cvv) {
-  return /^\d{3,4}$/.test(cvv);
-}
-
-// Show error message
-function showError(input, message) {
-  const parent = input.parentElement;
-  let error = parent.querySelector('.error-message');
-
-  if (!error) {
-    error = document.createElement('p');
-    error.className = 'error-message text-red-500 text-sm mt-1';
-    parent.appendChild(error);
+  // Set initial state
+  const defaultRadio = document.querySelector('input[name="paymentMethod"]:checked');
+  if (defaultRadio) {
+    defaultRadio.dispatchEvent(new Event('change'));
   }
-
-  error.textContent = message;
-  input.classList.add('border-red-500');
-  input.classList.remove('border-gray-300');
-}
-
-// Clear error message
-function clearError(input) {
-  const parent = input.parentElement;
-  const error = parent.querySelector('.error-message');
-
-  if (error) {
-    error.remove();
-  }
-
-  input.classList.remove('border-red-500');
-  input.classList.add('border-gray-300');
 }
 
 // Render checkout items
@@ -179,329 +254,6 @@ function renderCheckoutItems() {
   totalElement.textContent = subtotal.toFixed(2);
 }
 
-// Generate order number
-function generateOrderNumber() {
-  const timestamp = Date.now().toString(36).toUpperCase();
-  const random = Math.random().toString(36).substring(2, 5).toUpperCase();
-  return `ORD-${timestamp}-${random}`;
-}
-
-// Handle form submission
-function handleCheckout(e) {
-  e.preventDefault();
-
-  // Get form values
-  const email = document.getElementById('email').value.trim();
-  const phone = document.getElementById('phone').value.trim();
-  const firstName = document.getElementById('firstName').value.trim();
-  const lastName = document.getElementById('lastName').value.trim();
-  const address = document.getElementById('address').value.trim();
-  const neighborhood = document.getElementById('neighborhood').value.trim();
-  const city = document.getElementById('city').value.trim();
-  const state = document.getElementById('state').value.trim();
-  const zipCode = document.getElementById('zipCode').value.trim();
-
-  // Get selected payment method
-  const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value;
-
-  // Payment method specific fields
-  const cardName = document.getElementById('cardName')?.value.trim() || '';
-  const cardNumber = document.getElementById('cardNumber')?.value.trim() || '';
-  const expiry = document.getElementById('expiry')?.value.trim() || '';
-  const cvv = document.getElementById('cvv')?.value.trim() || '';
-  const cpf = document.getElementById('cpf')?.value.trim() || '';
-  const pixKey = document.getElementById('pixKey')?.value.trim() || '';
-
-  let isValid = true;
-
-  // Clear all previous errors
-  document.querySelectorAll('input').forEach(input => clearError(input));
-
-  // Validate email
-  if (!email) {
-    showError(document.getElementById('email'), 'Email é obrigatório');
-    isValid = false;
-  } else if (!validateEmail(email)) {
-    showError(document.getElementById('email'), 'Por favor, insira um email válido');
-    isValid = false;
-  }
-
-  // Validate phone
-  if (!phone) {
-    showError(document.getElementById('phone'), 'Telefone é obrigatório');
-    isValid = false;
-  } else if (!validatePhone(phone)) {
-    showError(document.getElementById('phone'), 'Por favor, insira um telefone válido');
-    isValid = false;
-  }
-
-  // Validate name fields
-  if (!firstName) {
-    showError(document.getElementById('firstName'), 'Nome é obrigatório');
-    isValid = false;
-  }
-
-  if (!lastName) {
-    showError(document.getElementById('lastName'), 'Sobrenome é obrigatório');
-    isValid = false;
-  }
-
-  // Validate address
-  if (!address) {
-    showError(document.getElementById('address'), 'Endereço é obrigatório');
-    isValid = false;
-  }
-
-  if (!neighborhood) {
-    showError(document.getElementById('neighborhood'), 'Bairro é obrigatório');
-    isValid = false;
-  }
-
-  if (!city) {
-    showError(document.getElementById('city'), 'Cidade é obrigatória');
-    isValid = false;
-  }
-
-  if (!state) {
-    showError(document.getElementById('state'), 'Estado é obrigatório');
-    isValid = false;
-  }
-
-  // Validate that address is in Campo Grande, MS
-  if (!validateCampoGrandeAddress(city, state)) {
-    showError(document.getElementById('city'), 'Atendemos apenas clientes em Campo Grande, MS');
-    isValid = false;
-  }
-
-  if (!zipCode) {
-    showError(document.getElementById('zipCode'), 'CEP é obrigatório');
-    isValid = false;
-  }
-
-  // Validate payment method specific fields
-  if (paymentMethod === 'credit_card') {
-    if (!cardName) {
-      showError(document.getElementById('cardName'), 'Nome no cartão é obrigatório');
-      isValid = false;
-    }
-
-    if (!cardNumber) {
-      showError(document.getElementById('cardNumber'), 'Número do cartão é obrigatório');
-      isValid = false;
-    } else if (!validateCardNumber(cardNumber)) {
-      showError(document.getElementById('cardNumber'), 'Por favor, insira um número de cartão válido');
-      isValid = false;
-    }
-
-    if (!expiry) {
-      showError(document.getElementById('expiry'), 'Data de validade é obrigatória');
-      isValid = false;
-    } else if (!validateExpiry(expiry)) {
-      showError(document.getElementById('expiry'), 'Por favor, insira uma data de validade válida');
-      isValid = false;
-    }
-
-    if (!cvv) {
-      showError(document.getElementById('cvv'), 'CVV é obrigatório');
-      isValid = false;
-    } else if (!validateCVV(cvv)) {
-      showError(document.getElementById('cvv'), 'Por favor, insira um CVV válido');
-      isValid = false;
-    }
-  } else if (paymentMethod === 'boleto') {
-    if (!cpf) {
-      showError(document.getElementById('cpf'), 'CPF/CNPJ é obrigatório');
-      isValid = false;
-    } else if (!validateCPF(cpf)) {
-      showError(document.getElementById('cpf'), 'Por favor, insira um CPF ou CNPJ válido');
-      isValid = false;
-    }
-  } else if (paymentMethod === 'pix') {
-    if (!pixKey) {
-      showError(document.getElementById('pixKey'), 'Chave PIX é obrigatória');
-      isValid = false;
-    }
-  }
-
-  if (!isValid) {
-    // Scroll to first error
-    const firstError = document.querySelector('.error-message');
-    if (firstError) {
-      firstError.closest('input').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-    return;
-  }
-
-  // Show success message
-  const checkoutForm = document.getElementById('checkout-form');
-  const successMessage = document.getElementById('success-message');
-  const orderNumber = document.getElementById('order-number');
-
-  checkoutForm.classList.add('hidden');
-  successMessage.classList.remove('hidden');
-  orderNumber.textContent = generateOrderNumber();
-
-  // Clear cart
-  clearCart();
-
-  // Scroll to top
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-// Payment method switching
-function setupPaymentMethodSwitching() {
-  const paymentRadios = document.querySelectorAll('input[name="paymentMethod"]');
-  const paymentForms = document.querySelectorAll('.payment-form');
-  const paymentOptionCards = document.querySelectorAll('.payment-option-card');
-
-  paymentRadios.forEach(radio => {
-    radio.addEventListener('change', (e) => {
-      const selectedMethod = e.target.value;
-
-      // Hide all forms
-      paymentForms.forEach(form => form.classList.add('hidden'));
-
-      // Show selected form
-      const selectedForm = document.getElementById(`${selectedMethod}-form`);
-      if (selectedForm) {
-        selectedForm.classList.remove('hidden');
-      }
-
-      // Update card styling
-      paymentOptionCards.forEach(card => {
-        card.classList.remove('border-blue-500', 'bg-blue-50');
-        card.classList.add('border-gray-200');
-      });
-
-      // Highlight selected card
-      const selectedCard = e.target.closest('.payment-option').querySelector('.payment-option-card');
-      if (selectedCard) {
-        selectedCard.classList.remove('border-gray-200');
-        selectedCard.classList.add('border-blue-500', 'bg-blue-50');
-      }
-    });
-  });
-
-  // Set initial state
-  const defaultRadio = document.querySelector('input[name="paymentMethod"]:checked');
-  if (defaultRadio) {
-    defaultRadio.dispatchEvent(new Event('change'));
-  }
-}
-
-// Format CPF/CNPJ
-function formatCPF(value) {
-  const cleaned = value.replace(/\D/g, '');
-
-  if (cleaned.length <= 11) {
-    // CPF format: 000.000.000-00
-    return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-  } else {
-    // CNPJ format: 00.000.000/0000-00
-    return cleaned.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
-  }
-}
-
-// Validate CPF
-function validateCPF(cpf) {
-  const cleaned = cpf.replace(/\D/g, '');
-  return cleaned.length === 11 || cleaned.length === 14;
-}
-
-// Validate Campo Grande address
-function validateCampoGrandeAddress(city, state) {
-  const isValidCity = city.toLowerCase() === 'campo grande';
-  const isValidState = state.toUpperCase() === 'MS';
-  return isValidCity && isValidState;
-}
-
-// Format CEP
-function formatCEP(value) {
-  const cleaned = value.replace(/\D/g, '');
-  if (cleaned.length <= 5) {
-    return cleaned;
-  }
-  return cleaned.slice(0, 5) + '-' + cleaned.slice(5, 8);
-}
-
-// Fetch address by CEP using ViaCEP API
-async function fetchAddressByCEP(cep) {
-  const zipCodeInput = document.getElementById('zipCode');
-  const addressInput = document.getElementById('address');
-  const neighborhoodInput = document.getElementById('neighborhood');
-  const cityInput = document.getElementById('city');
-  const stateInput = document.getElementById('state');
-  
-  // Show loading state
-  zipCodeInput.classList.add('border-blue-500', 'bg-blue-50');
-  zipCodeInput.classList.remove('border-gray-300');
-  
-  try {
-    const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-    const data = await response.json();
-    
-    // Clear loading state
-    zipCodeInput.classList.remove('border-blue-500', 'bg-blue-50');
-    zipCodeInput.classList.add('border-gray-300');
-    
-    // Check if CEP was found
-    if (data.erro) {
-      showError(zipCodeInput, 'CEP não encontrado');
-      // Clear address fields but keep defaults for city/state
-      addressInput.value = '';
-      neighborhoodInput.value = '';
-      cityInput.value = 'Campo Grande';
-      stateInput.value = 'MS';
-      return;
-    }
-    
-    // Clear any existing errors
-    clearError(zipCodeInput);
-    
-    // Validate that address is in Campo Grande, MS
-    if (!validateCampoGrandeAddress(data.localidade || '', data.uf || '')) {
-      showError(zipCodeInput, 'Atendemos apenas clientes em Campo Grande, MS');
-      // Clear address fields but keep defaults for city/state
-      addressInput.value = '';
-      neighborhoodInput.value = '';
-      cityInput.value = 'Campo Grande';
-      stateInput.value = 'MS';
-      return;
-    }
-    
-    // Populate address fields
-    if (data.logradouro) {
-      addressInput.value = data.logradouro;
-      clearError(addressInput);
-    }
-    
-    if (data.bairro) {
-      neighborhoodInput.value = data.bairro;
-      clearError(neighborhoodInput);
-    }
-    
-    // Keep city and state as Campo Grande, MS regardless of ViaCEP response
-    cityInput.value = 'Campo Grande';
-    stateInput.value = 'MS';
-    clearError(cityInput);
-    clearError(stateInput);
-    
-  } catch (error) {
-    // Clear loading state
-    zipCodeInput.classList.remove('border-blue-500', 'bg-blue-50');
-    zipCodeInput.classList.add('border-gray-300');
-    
-    showError(zipCodeInput, 'Erro ao buscar CEP. Tente novamente.');
-    console.error('ViaCEP API error:', error);
-    
-    // Clear address fields on error but keep defaults for city/state
-    addressInput.value = '';
-    neighborhoodInput.value = '';
-    cityInput.value = 'Campo Grande';
-    stateInput.value = 'MS';
-  }
-}
-
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   renderCheckoutItems();
@@ -545,10 +297,15 @@ document.addEventListener('DOMContentLoaded', () => {
     zipCodeInput.addEventListener('input', (e) => {
       const originalValue = e.target.value;
       const cleanedCEP = originalValue.replace(/\D/g, '');
-      
+
       // Format CEP in real-time
       e.target.value = formatCEP(originalValue);
-      
+
+      // Clear any previous zip code errors when user starts typing
+      if (cleanedCEP.length < 8) {
+        clearZipCodeError();
+      }
+
       // Trigger API call when CEP reaches 8 digits
       if (cleanedCEP.length === 8) {
         fetchAddressByCEP(cleanedCEP);
@@ -558,7 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const neighborhoodInput = document.getElementById('neighborhood');
         const cityInput = document.getElementById('city');
         const stateInput = document.getElementById('state');
-        
+
         // Only clear if the fields were previously filled by ViaCEP
         // (check if they're currently filled and user is now editing CEP)
         if (addressInput.value && neighborhoodInput.value) {
@@ -568,9 +325,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Always reset city/state to defaults
         cityInput.value = 'Campo Grande';
         stateInput.value = 'MS';
-        
-        // Clear any CEP-related errors
-        clearError(zipCodeInput);
       }
     });
   }
@@ -578,35 +332,24 @@ document.addEventListener('DOMContentLoaded', () => {
   // Prevent manual editing of city and state fields
   const cityInput = document.getElementById('city');
   const stateInput = document.getElementById('state');
-  
+
   if (cityInput) {
     cityInput.addEventListener('input', (e) => {
       e.target.value = 'Campo Grande';
     });
-    
+
     cityInput.addEventListener('focus', (e) => {
       e.target.select();
     });
   }
-  
+
   if (stateInput) {
     stateInput.addEventListener('input', (e) => {
       e.target.value = 'MS';
     });
-    
+
     stateInput.addEventListener('focus', (e) => {
       e.target.select();
     });
   }
-
-  // Place order button
-  const placeOrderBtn = document.getElementById('place-order-btn');
-  if (placeOrderBtn) {
-    placeOrderBtn.addEventListener('click', handleCheckout);
-  }
-
-  // Clear error on input focus
-  document.querySelectorAll('input').forEach(input => {
-    input.addEventListener('focus', () => clearError(input));
-  });
 });
