@@ -255,7 +255,7 @@ func main() {
 			return
 		}
 
-		prods, err := products.GetProductsByCategory("")
+		prods, err := products.GetAllProducts()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

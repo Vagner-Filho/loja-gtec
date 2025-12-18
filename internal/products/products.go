@@ -23,7 +23,7 @@ func SetDatabase(database *sql.DB) {
 
 // GetAllProducts retrieves all products from the database
 func GetAllProducts() ([]Product, error) {
-	rows, err := db.Query("SELECT id, name, price, image, category, is_available FROM products ORDER BY id DESC")
+	rows, err := db.Query("SELECT id, name, price, image, category, is_available FROM products WHERE category != 'servicos' ORDER BY id DESC")
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func GetProductsByCategory(category string) ([]Product, error) {
 		return GetAllProducts()
 	}
 
-	rows, err = db.Query("SELECT id, name, price, image, category, is_available FROM products WHERE category = $1 ORDER BY id DESC", category)
+	rows, err = db.Query("SELECT id, name, price, image, category, is_available FROM products WHERE category = $1 AND category != 'servicos' ORDER BY id DESC", category)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func GetProductsByCategory(category string) ([]Product, error) {
 // GetProductByID retrieves a single product by ID
 func GetProductByID(id int) (*Product, error) {
 	var p Product
-	err := db.QueryRow("SELECT id, name, price, image, category, is_available FROM products WHERE id = $1", id).
+	err := db.QueryRow("SELECT id, name, price, image, category, is_available FROM products WHERE id = $1 OFFSET 1 ROW", id).
 		Scan(&p.ID, &p.Name, &p.Price, &p.Image, &p.Category, &p.IsAvailable)
 	if err != nil {
 		return nil, err
@@ -125,6 +125,9 @@ func UpdateProduct(id int, name string, price float64, image, category string, i
 
 // DeleteProduct deletes a product from the database
 func DeleteProduct(id int) error {
+	if id == 1 {
+		return fmt.Errorf("Não é possível excluir o serviço de instalação")
+	}
 	result, err := db.Exec("DELETE FROM products WHERE id = $1", id)
 	if err != nil {
 		return err
