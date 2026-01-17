@@ -313,7 +313,76 @@ func main() {
 		tmpl.Execute(w, nil)
 	}))
 
+	http.HandleFunc("/admin/orders", admin.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
+		tmpl, err := template.ParseFiles("web/templates/admin-orders.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		tmpl.Execute(w, nil)
+	}))
+
 	// Admin API routes
+	http.HandleFunc("/api/admin/orders", admin.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		status := r.URL.Query().Get("status")
+		paymentStatus := r.URL.Query().Get("payment_status")
+
+		ordersList, err := orders.GetOrders(orders.OrderFilters{
+			Status:        status,
+			PaymentStatus: paymentStatus,
+			Limit:         50,
+			Offset:        0,
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html")
+		tmpl, err := template.ParseFiles("web/templates/admin-orders-list.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		tmpl.Execute(w, map[string]interface{}{"Orders": ordersList})
+	}))
+
+	http.HandleFunc("/api/admin/orders/", admin.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		path := strings.TrimPrefix(r.URL.Path, "/api/admin/orders/")
+		id, err := strconv.Atoi(path)
+		if err != nil {
+			http.Error(w, "Invalid order ID", http.StatusBadRequest)
+			return
+		}
+
+		order, items, err := orders.GetOrderWithItems(id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html")
+		tmpl, err := template.ParseFiles("web/templates/admin-order-detail.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		tmpl.Execute(w, map[string]interface{}{
+			"Order": order,
+			"Items": items,
+		})
+	}))
+
 	http.HandleFunc("/api/admin/products", admin.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:

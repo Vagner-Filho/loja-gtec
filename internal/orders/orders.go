@@ -556,3 +556,98 @@ func GetOrderItems(orderID int) ([]OrderItem, error) {
 
 	return items, nil
 }
+
+// OrderFilters represents filters for admin order listing
+type OrderFilters struct {
+	Status        string
+	PaymentStatus string
+	Limit         int
+	Offset        int
+}
+
+// GetOrders retrieves orders with optional filters
+func GetOrders(filters OrderFilters) ([]Order, error) {
+	if db == nil {
+		return nil, fmt.Errorf("database not initialized")
+	}
+
+	limit := filters.Limit
+	if limit <= 0 {
+		limit = 20
+	}
+
+	offset := filters.Offset
+	if offset < 0 {
+		offset = 0
+	}
+
+	baseQuery := `
+		SELECT id, order_number, email, phone, first_name, last_name, address,
+		       neighborhood, city, state, zip_code, apartment, payment_method,
+		       payment_status, stripe_payment_id, total_amount, status, created_at, updated_at
+		FROM orders
+	`
+
+	var conditions []string
+	var args []interface{}
+
+	if strings.TrimSpace(filters.Status) != "" {
+		args = append(args, filters.Status)
+		conditions = append(conditions, fmt.Sprintf("status = $%d", len(args)))
+	}
+
+	if strings.TrimSpace(filters.PaymentStatus) != "" {
+		args = append(args, filters.PaymentStatus)
+		conditions = append(conditions, fmt.Sprintf("payment_status = $%d", len(args)))
+	}
+
+	whereClause := ""
+	if len(conditions) > 0 {
+		whereClause = "WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	args = append(args, limit)
+	limitPlaceholder := len(args)
+	args = append(args, offset)
+	offsetPlaceholder := len(args)
+
+	query := fmt.Sprintf("%s %s ORDER BY created_at DESC LIMIT $%d OFFSET $%d", baseQuery, whereClause, limitPlaceholder, offsetPlaceholder)
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ordersList []Order
+	for rows.Next() {
+		var order Order
+		err := rows.Scan(
+			&order.ID, &order.OrderNumber, &order.Email, &order.Phone, &order.FirstName,
+			&order.LastName, &order.Address, &order.Neighborhood, &order.City, &order.State,
+			&order.ZipCode, &order.Apartment, &order.PaymentMethod, &order.PaymentStatus,
+			&order.StripePaymentID, &order.TotalAmount, &order.Status, &order.CreatedAt, &order.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		ordersList = append(ordersList, order)
+	}
+
+	return ordersList, nil
+}
+
+// GetOrderWithItems retrieves an order and its items
+func GetOrderWithItems(orderID int) (*Order, []OrderItem, error) {
+	order, err := GetOrderByID(orderID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	items, err := GetOrderItems(orderID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return order, items, nil
+}

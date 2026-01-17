@@ -1,0 +1,50 @@
+<div class="space-y-6">
+  <div class="border border-gray-200 rounded-lg p-4">
+    <h4 class="text-lg font-semibold text-gray-800 mb-3">Pedido {{ .Order.OrderNumber }}</h4>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
+      <div>
+        <div><span class="font-semibold">Cliente:</span> {{ .Order.FirstName }} {{ .Order.LastName }}</div>
+        <div><span class="font-semibold">Email:</span> {{ .Order.Email }}</div>
+        <div><span class="font-semibold">Telefone:</span> {{ .Order.Phone }}</div>
+      </div>
+      <div>
+        <div><span class="font-semibold">Status:</span> {{ .Order.Status }}</div>
+        <div><span class="font-semibold">Pagamento:</span> {{ .Order.PaymentStatus }}</div>
+        <div><span class="font-semibold">Método:</span> {{ .Order.PaymentMethod }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="border border-gray-200 rounded-lg p-4">
+    <h4 class="text-lg font-semibold text-gray-800 mb-3">Entrega</h4>
+    <div class="text-sm text-gray-700">
+      <div>{{ .Order.Address }}, {{ .Order.Neighborhood }}</div>
+      <div>{{ .Order.City }} - {{ .Order.State }}, {{ .Order.ZipCode }}</div>
+      {{- if .Order.Apartment }}
+        <div>{{ .Order.Apartment }}</div>
+      {{- end }}
+    </div>
+  </div>
+
+  <div class="border border-gray-200 rounded-lg p-4">
+    <h4 class="text-lg font-semibold text-gray-800 mb-3">Itens</h4>
+    <div class="space-y-3">
+      {{- range .Items }}
+        <div class="flex justify-between text-sm text-gray-700">
+          <div>
+            <div class="font-semibold">{{ .ProductName }}</div>
+            <div>Qtd: {{ .Quantity }}</div>
+          </div>
+          <div class="text-right">
+            <div>R$ {{ printf "%.2f" .UnitPrice }}</div>
+            <div class="text-gray-500">Total: R$ {{ printf "%.2f" .TotalPrice }}</div>
+          </div>
+        </div>
+      {{- end }}
+    </div>
+  </div>
+
+  <div class="flex justify-end">
+    <div class="text-lg font-semibold text-gray-800">Total: R$ {{ printf "%.2f" .Order.TotalAmount }}</div>
+  </div>
+</div>

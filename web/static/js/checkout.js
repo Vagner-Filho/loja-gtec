@@ -1,16 +1,10 @@
+import { saveCart, updateCartBadge } from "./cart.js";
+
 const INSTALLATION_SERVICE_NAME = 'Serviço de Instalação';
 
 // Import cart functions
 function getCart() {
   return JSON.parse(localStorage.getItem('cart')) || [];
-}
-
-function saveCart(cart) {
-  localStorage.setItem('cart', JSON.stringify(cart));
-}
-
-function clearCart() {
-  localStorage.setItem('cart', JSON.stringify([]));
 }
 
 // Format card number with spaces
@@ -66,11 +60,11 @@ function formatCEP(value) {
 function showZipCodeError(message) {
   const zipCodeInput = document.getElementById('zipCode');
   const errorContainer = zipCodeInput.parentElement.querySelector('.error-message-container');
-  
+
   // Add error styling to input
   zipCodeInput.classList.add('border-red-500', 'bg-red-50');
   zipCodeInput.classList.remove('border-gray-300', 'border-blue-500', 'bg-blue-50');
-  
+
   // Display error message
   errorContainer.innerHTML = `<p class="error-message text-red-500 text-sm mt-1">${message}</p>`;
 }
@@ -79,11 +73,11 @@ function showZipCodeError(message) {
 function clearZipCodeError() {
   const zipCodeInput = document.getElementById('zipCode');
   const errorContainer = zipCodeInput.parentElement.querySelector('.error-message-container');
-  
+
   // Remove error styling from input
   zipCodeInput.classList.remove('border-red-500', 'bg-red-50');
   zipCodeInput.classList.add('border-gray-300');
-  
+
   // Clear error message
   errorContainer.innerHTML = '';
 }
@@ -124,13 +118,15 @@ async function fetchAddressByCEP(cep) {
     // Validate location - only serve Campo Grande, MS
     if (data.localidade !== 'Campo Grande' || data.uf !== 'MS') {
       showZipCodeError('Atendemos exclusivamente clientes em Campo Grande, MS');
-      
+
       // Clear address fields but keep defaults for city/state
       addressInput.value = '';
       neighborhoodInput.value = '';
       cityInput.value = 'Campo Grande';
       stateInput.value = 'MS';
       return;
+    } else {
+      showInstallationServiceModal()
     }
 
     // Populate address fields
@@ -353,3 +349,153 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+function loadInstallationServiceModal() {
+  const container = document.getElementById('cart-container');
+  if (!container) {
+    console.error('Cart container not found');
+    return Promise.resolve(false);
+  }
+
+  const existingModal = container.querySelector('#installation-modal');
+  if (existingModal) {
+    return Promise.resolve(true);
+  }
+
+  return fetch('/installation-service-modal')
+    .then(response => response.text())
+    .then(html => {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const modal = doc.querySelector('#installation-modal');
+      const style = doc.querySelector('style');
+
+      if (modal) {
+        container.appendChild(modal);
+      }
+
+      if (style) {
+        container.appendChild(style);
+      }
+
+      return true;
+    })
+    .catch(error => {
+      console.error('Failed to load installation service modal:', error);
+      return false;
+    });
+}
+
+function showInstallationServiceModal() {
+  return loadInstallationServiceModal().then(() => {
+    const dialog = document.querySelector('#cart-container #installation-modal');
+    if (!dialog) {
+      return;
+    }
+
+    if (dialog.open) {
+      dialog.close();
+    }
+
+    dialog.showModal();
+
+    setTimeout(() => {
+      const content = dialog.querySelector('#installation-modal-content');
+      if (content) {
+        content.classList.remove('scale-95', 'opacity-0');
+        content.classList.add('scale-100', 'opacity-100');
+      }
+    }, 10);
+
+    installationServiceModalUISetup();
+  });
+}
+
+function installationServiceModalUISetup() {
+  const modal = document.getElementById('installation-modal');
+  if (!modal || modal.dataset.bound === 'true') {
+    return;
+  }
+
+  modal.dataset.bound = 'true';
+
+  const addInstallationBtn = document.getElementById('add-installation');
+  const skipInstallationBtn = document.getElementById('skip-installation');
+  const closeBtn = document.getElementById('close-installation');
+  addInstallationBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    proceed(true);
+  });
+
+  skipInstallationBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    proceed(false);
+  });
+
+  closeBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    proceed(false);
+  });
+
+  modal.addEventListener('cancel', (event) => {
+    event.preventDefault();
+    proceed(false);
+  });
+
+  modal.addEventListener('click', (event) => {
+    if (event.target === event.currentTarget) {
+      proceed(false);
+    }
+  });
+}
+
+let hasChosen = false;
+function proceed(includeInstallation) {
+  if (hasChosen) {
+    return;
+  }
+  hasChosen = true;
+
+  if (includeInstallation) {
+    const cart = getCart();
+    const existingInstallation = cart.findIndex(item => item.name === INSTALLATION_SERVICE_NAME);
+
+    if (existingInstallation === -1) {
+      cart.push({ name: INSTALLATION_SERVICE_NAME, price: 120.00, quantity: 1 });
+    } else {
+      cart[existingInstallation].price = 120.00;
+      cart[existingInstallation].quantity = 1;
+    }
+
+    saveCart(cart);
+    updateCartBadge();
+  } else {
+    const cart = getCart();
+    const filteredCart = cart.filter(item => item.name !== INSTALLATION_SERVICE_NAME);
+
+    if (filteredCart.length !== cart.length) {
+      saveCart(filteredCart);
+      updateCartBadge();
+    }
+  }
+  renderCheckoutItems();
+  hideInstallationServiceModal();
+  /*setTimeout(() => {
+    window.location.href = '/checkout';
+  }, 350);*/
+}
+
+function hideInstallationServiceModal() {
+  const dialog = document.querySelector('#cart-container #installation-modal');
+  if (dialog) {
+    const content = dialog.querySelector('#installation-modal-content');
+    if (content) {
+      content.classList.remove('scale-100', 'opacity-100');
+      content.classList.add('scale-95', 'opacity-0');
+    }
+
+    setTimeout(() => {
+      dialog.close();
+    }, 300);
+  }
+}

@@ -206,82 +206,6 @@ function hideCart() {
   }
 }
 
-function loadInstallationServiceModal() {
-  const container = document.getElementById('cart-container');
-  if (!container) {
-    console.error('Cart container not found');
-    return Promise.resolve(false);
-  }
-
-  const existingModal = container.querySelector('#installation-modal');
-  if (existingModal) {
-    return Promise.resolve(true);
-  }
-
-  return fetch('/installation-service-modal')
-    .then(response => response.text())
-    .then(html => {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      const modal = doc.querySelector('#installation-modal');
-      const style = doc.querySelector('style');
-
-      if (modal) {
-        container.appendChild(modal);
-      }
-
-      if (style) {
-        container.appendChild(style);
-      }
-
-      return true;
-    })
-    .catch(error => {
-      console.error('Failed to load installation service modal:', error);
-      return false;
-    });
-}
-
-function showInstallationServiceModal() {
-  return loadInstallationServiceModal().then(() => {
-    const dialog = document.querySelector('#cart-container #installation-modal');
-    if (!dialog) {
-      return;
-    }
-
-    if (dialog.open) {
-      dialog.close();
-    }
-
-    dialog.showModal();
-
-    setTimeout(() => {
-      const content = dialog.querySelector('#installation-modal-content');
-      if (content) {
-        content.classList.remove('scale-95', 'opacity-0');
-        content.classList.add('scale-100', 'opacity-100');
-      }
-    }, 10);
-
-    installationServiceModalUISetup();
-  });
-}
-
-function hideInstallationServiceModal() {
-  const dialog = document.querySelector('#cart-container #installation-modal');
-  if (dialog) {
-    const content = dialog.querySelector('#installation-modal-content');
-    if (content) {
-      content.classList.remove('scale-100', 'opacity-100');
-      content.classList.add('scale-95', 'opacity-0');
-    }
-
-    setTimeout(() => {
-      dialog.close();
-    }, 300);
-  }
-}
-
 function loadCartModal() {
   const container = document.getElementById('cart-container');
   if (!container) {
@@ -451,7 +375,8 @@ function cartModalUISetup() {
     }
 
     hideCart();
-    showInstallationServiceModal();
+    proceed(false);
+    //showInstallationServiceModal();
   }
 
   clearCartButton?.addEventListener('click', handleCartClear);
@@ -461,79 +386,47 @@ function cartModalUISetup() {
   proceedToCheckoutButton?.addEventListener('click', handleProceedToCheckout);
 }
 
-function installationServiceModalUISetup() {
-  const modal = document.getElementById('installation-modal');
-  if (!modal || modal.dataset.bound === 'true') {
-    return;
+function proceed(includeInstallation) {
+  const cart = getCart();
+  const filteredCart = cart.filter(item => item.name !== INSTALLATION_SERVICE_NAME);
+
+  if (filteredCart.length !== cart.length) {
+    saveCart(filteredCart);
+    updateCartBadge();
   }
 
-  modal.dataset.bound = 'true';
+  setTimeout(() => {
+    window.location.href = '/checkout';
+  }, 350);
+  return
 
-  const addInstallationBtn = document.getElementById('add-installation');
-  const skipInstallationBtn = document.getElementById('skip-installation');
-  const closeBtn = document.getElementById('close-installation');
-  let hasChosen = false;
+  if (includeInstallation) {
+    const cart = getCart();
+    const existingInstallation = cart.findIndex(item => item.name === INSTALLATION_SERVICE_NAME);
 
-  function proceed(includeInstallation) {
-    if (hasChosen) {
-      return;
-    }
-    hasChosen = true;
-
-    if (includeInstallation) {
-      const cart = getCart();
-      const existingInstallation = cart.findIndex(item => item.name === INSTALLATION_SERVICE_NAME);
-
-      if (existingInstallation === -1) {
-        cart.push({ name: INSTALLATION_SERVICE_NAME, price: 120.00, quantity: 1 });
-      } else {
-        cart[existingInstallation].price = 120.00;
-        cart[existingInstallation].quantity = 1;
-      }
-
-      saveCart(cart);
-      updateCartBadge();
+    if (existingInstallation === -1) {
+      cart.push({ name: INSTALLATION_SERVICE_NAME, price: 120.00, quantity: 1 });
     } else {
-      const cart = getCart();
-      const filteredCart = cart.filter(item => item.name !== INSTALLATION_SERVICE_NAME);
-
-      if (filteredCart.length !== cart.length) {
-        saveCart(filteredCart);
-        updateCartBadge();
-      }
+      cart[existingInstallation].price = 120.00;
+      cart[existingInstallation].quantity = 1;
     }
 
-    hideInstallationServiceModal();
-    setTimeout(() => {
-      window.location.href = '/checkout';
-    }, 350);
+    saveCart(cart);
+    updateCartBadge();
+  } else {
+    const cart = getCart();
+    const filteredCart = cart.filter(item => item.name !== INSTALLATION_SERVICE_NAME);
+
+    if (filteredCart.length !== cart.length) {
+      saveCart(filteredCart);
+      updateCartBadge();
+    }
   }
 
-  addInstallationBtn?.addEventListener('click', (event) => {
-    event.preventDefault();
-    proceed(true);
-  });
-
-  skipInstallationBtn?.addEventListener('click', (event) => {
-    event.preventDefault();
-    proceed(false);
-  });
-
-  closeBtn?.addEventListener('click', (event) => {
-    event.preventDefault();
-    proceed(false);
-  });
-
-  modal.addEventListener('cancel', (event) => {
-    event.preventDefault();
-    proceed(false);
-  });
-
-  modal.addEventListener('click', (event) => {
-    if (event.target === event.currentTarget) {
-      proceed(false);
-    }
-  });
+  hideInstallationServiceModal();
+  /*setTimeout(() => {
+    window.location.href = '/checkout';
+  }, 350);*/
 }
 
-export { addToCart, removeFromCart, updateQuantity, clearCart, renderCart, showCart, hideCart, updateCartBadge, cartModalUISetup, loadInstallationServiceModal, showInstallationServiceModal, hideInstallationServiceModal, installationServiceModalUISetup };
+export { addToCart, removeFromCart, updateQuantity, clearCart, renderCart, showCart, hideCart, updateCartBadge, cartModalUISetup, saveCart };
