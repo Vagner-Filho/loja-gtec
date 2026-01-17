@@ -1,4 +1,32 @@
 {{- if .Orders }}
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+    <div class="border border-gray-200 rounded-lg p-4 shadow-sm">
+      <div class="text-sm text-gray-500">Total geral</div>
+      <div class="text-2xl font-semibold text-gray-800">R$ {{ printf "%.2f" .Totals.Overall }}</div>
+    </div>
+    <div class="border border-gray-200 rounded-lg p-4 shadow-sm">
+      <div class="text-sm text-gray-500">Boleto</div>
+      <div class="flex items-center gap-2">
+        <div class="text-2xl font-semibold text-gray-800">R$ {{ printf "%.2f" .Totals.Boleto }}</div>
+        <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">{{ .Totals.BoletoCount }}</span>
+      </div>
+    </div>
+    <div class="border border-gray-200 rounded-lg p-4 shadow-sm">
+      <div class="text-sm text-gray-500">Cartão de crédito</div>
+      <div class="flex items-center gap-2">
+        <div class="text-2xl font-semibold text-gray-800">R$ {{ printf "%.2f" .Totals.CreditCard }}</div>
+        <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">{{ .Totals.CreditCardCount }}</span>
+      </div>
+    </div>
+    <div class="border border-gray-200 rounded-lg p-4 shadow-sm">
+      <div class="text-sm text-gray-500">PIX</div>
+      <div class="flex items-center gap-2">
+        <div class="text-2xl font-semibold text-gray-800">R$ {{ printf "%.2f" .Totals.Pix }}</div>
+        <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">{{ .Totals.PixCount }}</span>
+      </div>
+    </div>
+  </div>
+
   {{- range .Orders }}
     <div class="border border-gray-200 rounded-lg p-4 shadow-sm">
       <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">

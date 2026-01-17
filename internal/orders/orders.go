@@ -565,6 +565,72 @@ type OrderFilters struct {
 	Offset        int
 }
 
+// OrderTotals represents summary totals for orders
+type OrderTotals struct {
+	Overall         float64
+	Boleto          float64
+	CreditCard      float64
+	Pix             float64
+	BoletoCount     int
+	CreditCardCount int
+	PixCount        int
+}
+
+// GetOrderTotals retrieves summary totals for orders
+func GetOrderTotals(filters OrderFilters) (OrderTotals, error) {
+	if db == nil {
+		return OrderTotals{}, fmt.Errorf("database not initialized")
+	}
+
+	baseQuery := `
+		SELECT
+			COALESCE(SUM(total_amount), 0) AS overall,
+			COALESCE(SUM(CASE WHEN payment_method = 'boleto' THEN total_amount ELSE 0 END), 0) AS boleto,
+			COALESCE(SUM(CASE WHEN payment_method = 'credit_card' THEN total_amount ELSE 0 END), 0) AS credit_card,
+			COALESCE(SUM(CASE WHEN payment_method = 'pix' THEN total_amount ELSE 0 END), 0) AS pix,
+			COALESCE(COUNT(CASE WHEN payment_method = 'boleto' THEN 1 END), 0) AS boleto_count,
+			COALESCE(COUNT(CASE WHEN payment_method = 'credit_card' THEN 1 END), 0) AS credit_card_count,
+			COALESCE(COUNT(CASE WHEN payment_method = 'pix' THEN 1 END), 0) AS pix_count
+		FROM orders
+	`
+
+	var conditions []string
+	var args []interface{}
+
+	if strings.TrimSpace(filters.Status) != "" {
+		args = append(args, filters.Status)
+		conditions = append(conditions, fmt.Sprintf("status = $%d", len(args)))
+	}
+
+	if strings.TrimSpace(filters.PaymentStatus) != "" {
+		args = append(args, filters.PaymentStatus)
+		conditions = append(conditions, fmt.Sprintf("payment_status = $%d", len(args)))
+	}
+
+	whereClause := ""
+	if len(conditions) > 0 {
+		whereClause = "WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	query := fmt.Sprintf("%s %s", baseQuery, whereClause)
+
+	var totals OrderTotals
+	err := db.QueryRow(query, args...).Scan(
+		&totals.Overall,
+		&totals.Boleto,
+		&totals.CreditCard,
+		&totals.Pix,
+		&totals.BoletoCount,
+		&totals.CreditCardCount,
+		&totals.PixCount,
+	)
+	if err != nil {
+		return OrderTotals{}, err
+	}
+
+	return totals, nil
+}
+
 // GetOrders retrieves orders with optional filters
 func GetOrders(filters OrderFilters) ([]Order, error) {
 	if db == nil {

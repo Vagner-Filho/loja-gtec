@@ -332,12 +332,20 @@ func main() {
 		status := r.URL.Query().Get("status")
 		paymentStatus := r.URL.Query().Get("payment_status")
 
-		ordersList, err := orders.GetOrders(orders.OrderFilters{
+		filters := orders.OrderFilters{
 			Status:        status,
 			PaymentStatus: paymentStatus,
 			Limit:         50,
 			Offset:        0,
-		})
+		}
+
+		ordersList, err := orders.GetOrders(filters)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		totals, err := orders.GetOrderTotals(filters)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -349,7 +357,10 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		tmpl.Execute(w, map[string]interface{}{"Orders": ordersList})
+		tmpl.Execute(w, map[string]interface{}{
+			"Orders": ordersList,
+			"Totals": totals,
+		})
 	}))
 
 	http.HandleFunc("/api/admin/orders/", admin.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
