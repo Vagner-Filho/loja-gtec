@@ -8,7 +8,7 @@
     <link href="/static/css/dist/style.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js" integrity="sha384-/TgkGk7p307TH7EXJDuUlgG3Ce1UVolAOFopFekQkkXihi5u/6OCvVKyz1W+idaz" crossorigin="anonymous"></script>
   </head>
-  <body class="bg-gray-100 text-gray-800">
+  <body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col">
     <header class="bg-blue-700 shadow-md text-white">
       <div class="container mx-auto px-4 py-4 flex justify-between items-center">
         <h1 class="text-2xl font-bold">Loja G-TEC</h1>
@@ -80,7 +80,7 @@
         Peças
       </button>
     </div>
-    <main class="container mx-auto px-4 py-8">
+    <main class="container mx-auto px-4 py-8 flex-1">
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-3xl font-bold">Nossos Produtos</h2>
         <div id="loading" class="htmx-indicator">
@@ -90,20 +90,18 @@
           </svg>
         </div>
       </div>
-      <div id="products-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        <!-- Initial products loaded here -->
-        <div class="bg-white rounded-lg shadow-md overflow-hidden product-card" data-name="Purificador IBBL Mio Branco" data-price="699.99">
-          <img src="/static/images/purificador.jpg" alt="Purificador IBBL Mio Branco" class="w-full h-64 object-contain">
-          <div class="p-4">
-            <h3 class="text-xl font-bold mb-2">Purificador IBBL Mio Branco</h3>
-            <p class="text-gray-600 mb-4">R$ 699.99</p>
-            <button class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 add-to-cart">Adicionar ao Carrinho</button>
-          </div>
+      <div id="products-container"
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+        hx-get="/products/all"
+        hx-trigger="load"
+        hx-target="#products-container"
+        hx-swap="innerHTML"
+        hx-indicator="#loading">
+        <div class="bg-white rounded-lg shadow-md p-6 text-center text-gray-500">
+          Carregando produtos...
         </div>
       </div>
     </main>
-
-    
 
     <footer class="bg-gray-800 text-white py-4 mt-8">
       <div class="container mx-auto px-4 text-center">

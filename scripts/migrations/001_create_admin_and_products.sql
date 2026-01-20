@@ -6,44 +6,59 @@ CREATE TABLE IF NOT EXISTS admin_users (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS items (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    image TEXT NOT NULL,
+    is_available BOOL NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create products table
 CREATE TABLE IF NOT EXISTS products (
     id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    price DECIMAL(10, 2) NOT NULL,
-    image TEXT NOT NULL,
     category TEXT NOT NULL,
-    is_available BOOL NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    item_id INTEGER REFERENCES items ON DELETE CASCADE
 );
-
--- Insert default products
-INSERT INTO products (name, price, image, category, is_available) VALUES
-    ('Purificador IBBL Mio Branco', 699.99, '/static/images/purificador.jpg', 'purificadores', TRUE),
-    ('Bebedouro IBBL Compact', 499.99, '/static/images/bebedouro.jpg', 'bebedouros', TRUE),
-    ('Válvula Redutora de Pressão 1/4', 45.99, '/static/images/peca.jpg', 'pecas', TRUE),
-    ('Refil Gioviale Rpc-01 Lorenzetti', 89.99, '/static/images/refil.jpg', 'refis', TRUE);
 
 CREATE TABLE IF NOT EXISTS services (
     id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    price DECIMAL(10, 2) NOT NULL,
-    image TEXT NOT NULL,
     description TEXT NOT NULL,
-    is_available BOOL NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    item_id INTEGER REFERENCES items ON DELETE CASCADE
 );
 
--- Insert default products
-INSERT INTO services (name, price, image, description, is_available) VALUES
-    ('Serviço de Instalação', 120.00, '/static/images/instalacao.svg', 'Instalação profissional, certificada e de garantia para produtos comprados na loja.', TRUE);
+CREATE TABLE IF NOT EXISTS orders (
+    id SERIAL PRIMARY KEY,
+    order_number VARCHAR(50) UNIQUE NOT NULL,
+    email TEXT NOT NULL,
+    phone VARCHAR(50) NOT NULL,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    address TEXT NOT NULL,
+    neighborhood VARCHAR(100) NOT NULL,
+    city VARCHAR(100) NOT NULL,
+    state VARCHAR(50) NOT NULL,
+    zip_code VARCHAR(20) NOT NULL,
+    apartment TEXT,
+    payment_method VARCHAR(50) NOT NULL,
+    payment_status VARCHAR(50) DEFAULT 'pending',
+    stripe_payment_id TEXT,
+    total_amount DECIMAL(10,2) NOT NULL,
+    status VARCHAR(50) DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
--- Create index on category for faster filtering
-CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
-
--- Create a default admin user (username: admin, password: admin123)
--- Password hash for 'admin123' using bcrypt
-INSERT INTO admin_users (username, password_hash) VALUES
-    ('admin', '$2a$10$rXqK9VGKvJ5YPYz9O4vHLOGvGbkE3VJ5zJq5x5P5qWwYJ5ZJQ5ZJO');
+-- Create order_items table
+CREATE TABLE IF NOT EXISTS order_items (
+    id SERIAL PRIMARY KEY,
+    order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    item_id INTEGER NOT NULL REFERENCES items,
+    item_name TEXT NOT NULL,
+    quantity INTEGER NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    total_price DECIMAL(10,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

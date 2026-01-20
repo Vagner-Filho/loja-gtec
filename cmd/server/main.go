@@ -188,13 +188,18 @@ func main() {
 
 	// Product filter routes
 	http.HandleFunc("/products/bebedouros", func(w http.ResponseWriter, r *http.Request) {
-		tmpl, err := template.ParseFiles("web/templates/product-cards.html")
+		prods, err := products.GetProductsByCategory("bebedouros")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		prods, err := products.GetProductsByCategory("bebedouros")
+		templateFile := "web/templates/product-cards.html"
+		if len(prods) == 0 {
+			templateFile = "web/templates/product-empty-state.html"
+		}
+
+		tmpl, err := template.ParseFiles(templateFile)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -204,13 +209,18 @@ func main() {
 	})
 
 	http.HandleFunc("/products/purificadores", func(w http.ResponseWriter, r *http.Request) {
-		tmpl, err := template.ParseFiles("web/templates/product-cards.html")
+		prods, err := products.GetProductsByCategory("purificadores")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		prods, err := products.GetProductsByCategory("purificadores")
+		templateFile := "web/templates/product-cards.html"
+		if len(prods) == 0 {
+			templateFile = "web/templates/product-empty-state.html"
+		}
+
+		tmpl, err := template.ParseFiles(templateFile)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -219,13 +229,18 @@ func main() {
 	})
 
 	http.HandleFunc("/products/refis", func(w http.ResponseWriter, r *http.Request) {
-		tmpl, err := template.ParseFiles("web/templates/product-cards.html")
+		prods, err := products.GetProductsByCategory("refis")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		prods, err := products.GetProductsByCategory("refis")
+		templateFile := "web/templates/product-cards.html"
+		if len(prods) == 0 {
+			templateFile = "web/templates/product-empty-state.html"
+		}
+
+		tmpl, err := template.ParseFiles(templateFile)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -234,13 +249,18 @@ func main() {
 	})
 
 	http.HandleFunc("/products/pecas", func(w http.ResponseWriter, r *http.Request) {
-		tmpl, err := template.ParseFiles("web/templates/product-cards.html")
+		prods, err := products.GetProductsByCategory("pecas")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		prods, err := products.GetProductsByCategory("pecas")
+		templateFile := "web/templates/product-cards.html"
+		if len(prods) == 0 {
+			templateFile = "web/templates/product-empty-state.html"
+		}
+
+		tmpl, err := template.ParseFiles(templateFile)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -249,13 +269,18 @@ func main() {
 	})
 
 	http.HandleFunc("/products/all", func(w http.ResponseWriter, r *http.Request) {
-		tmpl, err := template.ParseFiles("web/templates/product-cards.html")
+		prods, err := products.GetAllProducts()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		prods, err := products.GetAllProducts()
+		templateFile := "web/templates/product-cards.html"
+		if len(prods) == 0 {
+			templateFile = "web/templates/product-empty-state.html"
+		}
+
+		tmpl, err := template.ParseFiles(templateFile)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

@@ -5,7 +5,7 @@
     <div class="flex-1">
       <h3 class="text-lg font-semibold text-gray-800">{{.Name}}</h3>
       <p class="text-gray-600 mt-1">R$ {{printf "%.2f" .Price}}</p>
-      <p class="text-sm text-gray-500 mt-1">Category: <span class="font-medium">{{formatCategory .Category}}</span></p>
+      <p class="text-sm text-gray-500 mt-1">Categoria: <span class="font-medium">{{formatCategory .Category}}</span></p>
       <p class="text-sm mt-1">
         {{if .IsAvailable}}
           <span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Em Estoque</span>

@@ -34,14 +34,14 @@ type Order struct {
 
 // OrderItem represents an item in an order
 type OrderItem struct {
-	ID          int       `json:"id"`
-	OrderID     int       `json:"order_id"`
-	ProductID   int       `json:"product_id"`
-	ProductName string    `json:"product_name"`
-	Quantity    int       `json:"quantity"`
-	UnitPrice   float64   `json:"unit_price"`
-	TotalPrice  float64   `json:"total_price"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID         int       `json:"id"`
+	OrderID    int       `json:"order_id"`
+	ItemID     int       `json:"item_id"`
+	ItemName   string    `json:"item_name"`
+	Quantity   int       `json:"quantity"`
+	UnitPrice  float64   `json:"unit_price"`
+	TotalPrice float64   `json:"total_price"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 // CheckoutForm represents the checkout form data
@@ -464,9 +464,8 @@ func CreateOrder(form CheckoutForm) (*Order, error) {
 
 	// Create order items
 	for _, item := range form.CartItems {
-		fmt.Printf("%v\n", item.ID)
 		_, err := db.Exec(`
-			INSERT INTO order_items (order_id, product_id, product_name, quantity, unit_price, total_price)
+			INSERT INTO order_items (order_id, item_id, item_name, quantity, unit_price, total_price)
 			VALUES ($1, $2, $3, $4, $5, $6)
 		`, order.ID, item.ID, item.Name, item.Quantity, item.Price, item.Price*float64(item.Quantity))
 
@@ -531,7 +530,7 @@ func GetOrderItems(orderID int) ([]OrderItem, error) {
 	}
 
 	query := `
-		SELECT id, order_id, product_id, product_name, quantity, unit_price, total_price, created_at
+		SELECT id, order_id, item_id, item_name, quantity, unit_price, total_price, created_at
 		FROM order_items WHERE order_id = $1 ORDER BY id
 	`
 
@@ -545,7 +544,7 @@ func GetOrderItems(orderID int) ([]OrderItem, error) {
 	for rows.Next() {
 		var item OrderItem
 		err := rows.Scan(
-			&item.ID, &item.OrderID, &item.ProductID, &item.ProductName,
+			&item.ID, &item.OrderID, &item.ItemID, &item.ItemName,
 			&item.Quantity, &item.UnitPrice, &item.TotalPrice, &item.CreatedAt,
 		)
 		if err != nil {
