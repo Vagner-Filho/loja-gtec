@@ -18,25 +18,7 @@
     </header>
 
     <main class="container mx-auto px-4 py-8">
-      <!-- Success Message (Hidden by default) -->
-      <div id="success-message" class="hidden">
-        <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-lg p-8 text-center">
-          <div class="mb-6">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 mx-auto text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <h2 class="text-3xl font-bold text-gray-900 mb-4">Pedido Confirmado!</h2>
-          <p class="text-gray-600 mb-2">Obrigado pela sua compra.</p>
-          <p class="text-gray-600 mb-8">Pedido #<span id="order-number" class="font-mono font-semibold"></span></p>
-          <p class="text-gray-500 text-sm mb-8">Um email de confirmação foi enviado para seu endereço de email.</p>
-          <a href="/" class="inline-block bg-blue-500 text-white px-8 py-3 rounded-lg hover:bg-blue-600 transition-colors duration-200 font-semibold">
-            Continuar Comprando
-          </a>
-        </div>
-      </div>
-
-      <!-- Checkout Form (Hidden on success) -->
+      <!-- Checkout Form -->
       <div id="checkout-form">
         <form id="main-checkout-form"
               class="grid grid-cols-1 lg:grid-cols-3 gap-8"
@@ -177,50 +159,33 @@
               </label>
             </div>
 
+            <div class="space-y-4">
+              <div>
+                <label for="cpf" class="block text-sm font-medium text-gray-700 mb-2">CPF/CNPJ</label>
+                <input type="text" id="cpf" name="cpf" required
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                <div class="error-message-container"></div>
+              </div>
+              <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <p class="text-sm text-gray-600">
+                  Você será redirecionado para o Stripe Checkout para finalizar o pagamento com segurança.
+                </p>
+              </div>
+            </div>
+
             <!-- Credit Card Form -->
             <fieldset id="credit_card-form" class="payment-form space-y-4">
-              <h3 class="text-lg font-semibold mb-4">Informações do Cartão de Crédito</h3>
-              <div>
-                <label for="cardName" class="block text-sm font-medium text-gray-700 mb-2">Nome no Cartão</label>
-                <input type="text" id="cardName" name="cardName" required
-                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="João Silva">
-                <div class="error-message-container"></div>
-              </div>
-              <div>
-                <label for="cardNumber" class="block text-sm font-medium text-gray-700 mb-2">Número do Cartão</label>
-                <input type="text" id="cardNumber" name="cardNumber" required maxlength="19"
-                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="0000 0000 0000 0000">
-                <div class="error-message-container"></div>
-              </div>
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label for="expiry" class="block text-sm font-medium text-gray-700 mb-2">Data de Validade</label>
-                  <input type="text" id="expiry" name="expiry" required maxlength="5" placeholder="MM/AA"
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
-                  <div class="error-message-container"></div>
-                </div>
-                <div>
-                  <label for="cvv" class="block text-sm font-medium text-gray-700 mb-2">CVV</label>
-                  <input type="text" id="cvv" name="cvv" required maxlength="4" placeholder="123"
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
-                  <div class="error-message-container"></div>
-                </div>
-              </div>
-              <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <h3 class="text-lg font-semibold mb-4">Cartão de Crédito</h3>
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p class="text-sm text-blue-700">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                  Pagamento seguro com criptografia SSL
+                  Informe os dados do cartão diretamente no checkout seguro do Stripe.
                 </p>
               </div>
             </fieldset>
 
             <!-- Boleto Form -->
             <fieldset id="boleto-form" class="payment-form hidden space-y-4">
-              <h3 class="text-lg font-semibold mb-4">Informações do Boleto</h3>
+              <h3 class="text-lg font-semibold mb-4">Boleto</h3>
               <div class="bg-green-50 border border-green-200 rounded-lg p-4">
                 <div class="flex items-start">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600 mt-0.5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -237,12 +202,6 @@
                   </div>
                 </div>
               </div>
-              <div>
-                <label for="cpf" class="block text-sm font-medium text-gray-700 mb-2">CPF/CNPJ</label>
-                <input type="text" id="cpf" name="cpf" required
-                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
-                <div class="error-message-container"></div>
-              </div>
               <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                 <p class="text-sm text-yellow-700">
                   <strong>Atenção:</strong> O pagamento do boleto leva até 3 dias úteis para ser processado.
@@ -252,7 +211,7 @@
 
             <!-- PIX Form -->
             <fieldset id="pix-form" class="payment-form hidden space-y-4">
-              <h3 class="text-lg font-semibold mb-4">Informações do PIX</h3>
+              <h3 class="text-lg font-semibold mb-4">PIX</h3>
               <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
                 <div class="flex items-start">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-600 mt-0.5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -268,12 +227,6 @@
                     </ul>
                   </div>
                 </div>
-              </div>
-              <div>
-                <label for="pixKey" class="block text-sm font-medium text-gray-700 mb-2">Chave PIX (CPF/CNPJ/Telefone/Email)</label>
-                <input type="text" id="pixKey" name="pixKey" required
-                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
-                <div class="error-message-container"></div>
               </div>
               <div class="bg-green-50 border border-green-200 rounded-lg p-3">
                 <p class="text-sm text-green-700">

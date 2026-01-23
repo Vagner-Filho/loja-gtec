@@ -2,6 +2,7 @@ package orders
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -23,6 +24,7 @@ type Order struct {
 	State           string    `json:"state"`
 	ZipCode         string    `json:"zip_code"`
 	Apartment       string    `json:"apartment"`
+	CPF             string    `json:"cpf"`
 	PaymentMethod   string    `json:"payment_method"`
 	PaymentStatus   string    `json:"payment_status"`
 	StripePaymentID string    `json:"stripe_payment_id"`
@@ -56,15 +58,8 @@ type CheckoutForm struct {
 	State         string `json:"state"`
 	ZipCode       string `json:"zip_code"`
 	Apartment     string `json:"apartment"`
+	CPF           string `json:"cpf"`
 	PaymentMethod string `json:"payment_method"`
-
-	// Payment method specific fields
-	CardName   string `json:"card_name,omitempty"`
-	CardNumber string `json:"card_number,omitempty"`
-	Expiry     string `json:"expiry,omitempty"`
-	CVV        string `json:"cvv,omitempty"`
-	CPF        string `json:"cpf,omitempty"`
-	PixKey     string `json:"pix_key,omitempty"`
 
 	// Cart items
 	CartItems []CartItem `json:"cart_items"`
@@ -91,6 +86,13 @@ type ValidationResult struct {
 }
 
 var db *sql.DB
+
+const installationServiceName = "Serviço de Instalação"
+
+var (
+	ErrInstallationServiceUnavailable = errors.New("No momento não conseguimos oferecer o serviço de instalação.")
+	ErrInvalidCartItem                = errors.New("Item inválido no carrinho.")
+)
 
 // SetDatabase sets the database connection for the orders package
 func SetDatabase(database *sql.DB) {
@@ -367,19 +369,9 @@ func ValidateCheckoutForm(form CheckoutForm) ValidationResult {
 	addressErrors := ValidateAddress(form.Address, form.Neighborhood, form.City, form.State, form.ZipCode)
 	errors = append(errors, addressErrors...)
 
-	// Validate payment method specific fields
-	switch form.PaymentMethod {
-	case "credit_card":
-		cardErrors := ValidateCreditCard(form.CardName, form.CardNumber, form.Expiry, form.CVV)
-		errors = append(errors, cardErrors...)
-	case "boleto":
-		if err := ValidateCPF(form.CPF); err != nil {
-			errors = append(errors, *err)
-		}
-	case "pix":
-		if err := ValidatePixKey(form.PixKey); err != nil {
-			errors = append(errors, *err)
-		}
+	// Validate CPF/CNPJ for all payment methods
+	if err := ValidateCPF(form.CPF); err != nil {
+		errors = append(errors, *err)
 	}
 
 	// Validate cart items
@@ -400,15 +392,61 @@ func GenerateOrderNumber() string {
 	return fmt.Sprintf("ORD-%d-%s", timestamp, random)
 }
 
+func resolveCartItems(items []CartItem) ([]CartItem, error) {
+	resolved := make([]CartItem, len(items))
+	copy(resolved, items)
+
+	for i, item := range resolved {
+		if item.ID > 0 {
+			continue
+		}
+
+		if strings.TrimSpace(item.Name) == "" {
+			return nil, ErrInvalidCartItem
+		}
+
+		var itemID int
+		err := db.QueryRow("SELECT id FROM items WHERE name = $1", item.Name).Scan(&itemID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				if item.Name == installationServiceName {
+					return nil, ErrInstallationServiceUnavailable
+				}
+				return nil, ErrInvalidCartItem
+			}
+			return nil, fmt.Errorf("failed to resolve cart item: %v", err)
+		}
+
+		resolved[i].ID = itemID
+	}
+
+	return resolved, nil
+}
+
 // CreateOrder creates a new order in the database
 func CreateOrder(form CheckoutForm) (*Order, error) {
 	if db == nil {
 		return nil, fmt.Errorf("database not initialized")
 	}
 
+	resolvedItems, err := resolveCartItems(form.CartItems)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("failed to start transaction: %v", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
 	// Calculate total amount
 	var totalAmount float64
-	for _, item := range form.CartItems {
+	for _, item := range resolvedItems {
 		totalAmount += item.Price * float64(item.Quantity)
 	}
 
@@ -416,15 +454,15 @@ func CreateOrder(form CheckoutForm) (*Order, error) {
 
 	query := `
 		INSERT INTO orders (
-			order_number, email, phone, first_name, last_name, address, 
-			neighborhood, city, state, zip_code, apartment, payment_method,
-			total_amount, status
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+			order_number, email, phone, first_name, last_name, address,
+			neighborhood, city, state, zip_code, apartment, cpf_cnpj,
+			payment_method, total_amount, status
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		RETURNING id, created_at, updated_at
 	`
 
 	var order Order
-	err := db.QueryRow(
+	err = tx.QueryRow(
 		query,
 		orderNumber,
 		form.Email,
@@ -437,6 +475,7 @@ func CreateOrder(form CheckoutForm) (*Order, error) {
 		form.State,
 		form.ZipCode,
 		form.Apartment,
+		form.CPF,
 		form.PaymentMethod,
 		totalAmount,
 		"pending",
@@ -458,22 +497,26 @@ func CreateOrder(form CheckoutForm) (*Order, error) {
 	order.State = form.State
 	order.ZipCode = form.ZipCode
 	order.Apartment = form.Apartment
+	order.CPF = form.CPF
 	order.PaymentMethod = form.PaymentMethod
 	order.TotalAmount = totalAmount
 	order.Status = "pending"
 
 	// Create order items
-	for _, item := range form.CartItems {
-		_, err := db.Exec(`
+	for _, item := range resolvedItems {
+		_, err := tx.Exec(`
 			INSERT INTO order_items (order_id, item_id, item_name, quantity, unit_price, total_price)
 			VALUES ($1, $2, $3, $4, $5, $6)
 		`, order.ID, item.ID, item.Name, item.Quantity, item.Price, item.Price*float64(item.Quantity))
 
 		if err != nil {
-			// Clean up order if item creation fails
-			db.Exec("DELETE FROM orders WHERE id = $1", order.ID)
 			return nil, fmt.Errorf("failed to create order item: %v", err)
 		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, fmt.Errorf("failed to commit order: %v", err)
 	}
 
 	return &order, nil
@@ -495,6 +538,22 @@ func UpdateOrderPaymentStatus(orderID int, paymentStatus, stripePaymentID string
 	return err
 }
 
+// UpdateOrderStripePaymentID updates the Stripe payment reference for an order
+func UpdateOrderStripePaymentID(orderID int, stripePaymentID string) error {
+	if db == nil {
+		return fmt.Errorf("database not initialized")
+	}
+
+	query := `
+		UPDATE orders
+		SET stripe_payment_id = $1, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2
+	`
+
+	_, err := db.Exec(query, stripePaymentID, orderID)
+	return err
+}
+
 // GetOrderByID retrieves an order by ID
 func GetOrderByID(orderID int) (*Order, error) {
 	if db == nil {
@@ -503,21 +562,27 @@ func GetOrderByID(orderID int) (*Order, error) {
 
 	query := `
 		SELECT id, order_number, email, phone, first_name, last_name, address,
-			   neighborhood, city, state, zip_code, apartment, payment_method,
-			   payment_status, stripe_payment_id, total_amount, status, created_at, updated_at
+		       neighborhood, city, state, zip_code, apartment, cpf_cnpj, payment_method,
+		       payment_status, stripe_payment_id, total_amount, status, created_at, updated_at
 		FROM orders WHERE id = $1
 	`
 
 	var order Order
+	var stripePaymentID sql.NullString
 	err := db.QueryRow(query, orderID).Scan(
 		&order.ID, &order.OrderNumber, &order.Email, &order.Phone, &order.FirstName,
 		&order.LastName, &order.Address, &order.Neighborhood, &order.City, &order.State,
-		&order.ZipCode, &order.Apartment, &order.PaymentMethod, &order.PaymentStatus,
-		&order.StripePaymentID, &order.TotalAmount, &order.Status, &order.CreatedAt, &order.UpdatedAt,
+		&order.ZipCode, &order.Apartment, &order.CPF, &order.PaymentMethod, &order.PaymentStatus,
+		&stripePaymentID, &order.TotalAmount, &order.Status, &order.CreatedAt, &order.UpdatedAt,
 	)
 
 	if err != nil {
+		fmt.Printf("%v", err.Error())
 		return nil, err
+	}
+
+	if stripePaymentID.Valid {
+		order.StripePaymentID = stripePaymentID.String
 	}
 
 	return &order, nil
@@ -648,7 +713,7 @@ func GetOrders(filters OrderFilters) ([]Order, error) {
 
 	baseQuery := `
 		SELECT id, order_number, email, phone, first_name, last_name, address,
-		       neighborhood, city, state, zip_code, apartment, payment_method,
+		       neighborhood, city, state, zip_code, apartment, cpf_cnpj, payment_method,
 		       payment_status, stripe_payment_id, total_amount, status, created_at, updated_at
 		FROM orders
 	`
@@ -687,14 +752,18 @@ func GetOrders(filters OrderFilters) ([]Order, error) {
 	var ordersList []Order
 	for rows.Next() {
 		var order Order
+		var stripePaymentID sql.NullString
 		err := rows.Scan(
 			&order.ID, &order.OrderNumber, &order.Email, &order.Phone, &order.FirstName,
 			&order.LastName, &order.Address, &order.Neighborhood, &order.City, &order.State,
-			&order.ZipCode, &order.Apartment, &order.PaymentMethod, &order.PaymentStatus,
-			&order.StripePaymentID, &order.TotalAmount, &order.Status, &order.CreatedAt, &order.UpdatedAt,
+			&order.ZipCode, &order.Apartment, &order.CPF, &order.PaymentMethod, &order.PaymentStatus,
+			&stripePaymentID, &order.TotalAmount, &order.Status, &order.CreatedAt, &order.UpdatedAt,
 		)
 		if err != nil {
 			return nil, err
+		}
+		if stripePaymentID.Valid {
+			order.StripePaymentID = stripePaymentID.String
 		}
 		ordersList = append(ordersList, order)
 	}

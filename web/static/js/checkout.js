@@ -7,33 +7,6 @@ function getCart() {
   return JSON.parse(localStorage.getItem('cart')) || [];
 }
 
-// Format card number with spaces
-function formatCardNumber(value) {
-  const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-  const matches = v.match(/\d{4,16}/g);
-  const match = (matches && matches[0]) || '';
-  const parts = [];
-
-  for (let i = 0, len = match.length; i < len; i += 4) {
-    parts.push(match.substring(i, i + 4));
-  }
-
-  if (parts.length) {
-    return parts.join(' ');
-  } else {
-    return value;
-  }
-}
-
-// Format expiry date
-function formatExpiry(value) {
-  const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-  if (v.length >= 2) {
-    return v.slice(0, 2) + '/' + v.slice(2, 4);
-  }
-  return v;
-}
-
 // Format CPF/CNPJ
 function formatCPF(value) {
   const cleaned = value.replace(/\D/g, '');
@@ -255,30 +228,6 @@ document.addEventListener('DOMContentLoaded', () => {
   renderCheckoutItems();
   setupPaymentMethodSwitching();
 
-  // Card number formatting
-  const cardNumberInput = document.getElementById('cardNumber');
-  if (cardNumberInput) {
-    cardNumberInput.addEventListener('input', (e) => {
-      e.target.value = formatCardNumber(e.target.value);
-    });
-  }
-
-  // Expiry formatting
-  const expiryInput = document.getElementById('expiry');
-  if (expiryInput) {
-    expiryInput.addEventListener('input', (e) => {
-      e.target.value = formatExpiry(e.target.value);
-    });
-  }
-
-  // CVV - numbers only
-  const cvvInput = document.getElementById('cvv');
-  if (cvvInput) {
-    cvvInput.addEventListener('input', (e) => {
-      e.target.value = e.target.value.replace(/\D/g, '');
-    });
-  }
-
   // CPF formatting
   const cpfInput = document.getElementById('cpf');
   if (cpfInput) {
@@ -461,8 +410,9 @@ function proceed(includeInstallation) {
     const existingInstallation = cart.findIndex(item => item.name === INSTALLATION_SERVICE_NAME);
 
     if (existingInstallation === -1) {
-      cart.push({ name: INSTALLATION_SERVICE_NAME, price: 120.00, quantity: 1 });
+      cart.push({ id: 1, name: INSTALLATION_SERVICE_NAME, price: 120.00, quantity: 1 });
     } else {
+      cart[existingInstallation].id = 1;
       cart[existingInstallation].price = 120.00;
       cart[existingInstallation].quantity = 1;
     }

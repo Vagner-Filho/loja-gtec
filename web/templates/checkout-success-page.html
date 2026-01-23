@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedido Confirmado - Lojagtec</title>
+    <link href="/static/css/dist/style.css" rel="stylesheet">
+  </head>
+  <body class="bg-gray-100 text-gray-800">
+    <header class="bg-white shadow-md">
+      <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+        <h1 class="text-2xl font-bold">Lojagtec</h1>
+        <nav class="flex items-center">
+          <a href="/" class="px-4 text-blue-500 hover:text-blue-700">Voltar à Loja</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-10">
+      <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-lg p-8 text-center">
+        <div class="mb-6">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 mx-auto text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Pedido recebido!</h2>
+        <p class="text-gray-600 mb-2">Obrigado pela sua compra.</p>
+        <p class="text-gray-600 mb-6">Pedido #<span class="font-mono font-semibold">{{.Order.OrderNumber}}</span></p>
+        {{if eq .Order.PaymentStatus "paid"}}
+          <p class="text-green-700 text-sm mb-8">Pagamento confirmado. Estamos preparando seu pedido.</p>
+        {{else}}
+          <p class="text-yellow-700 text-sm mb-8">Pagamento pendente. Assim que confirmado, iniciaremos a separação.</p>
+        {{end}}
+        <p class="text-gray-500 text-sm mb-8">Enviamos a confirmação para {{.Order.Email}}.</p>
+        <a href="/" class="inline-block bg-blue-500 text-white px-8 py-3 rounded-lg hover:bg-blue-600 transition-colors duration-200 font-semibold">
+          Continuar Comprando
+        </a>
+      </div>
+    </main>
+
+    <footer class="bg-gray-800 text-white py-4 mt-8">
+      <div class="container mx-auto px-4 text-center">
+        <p>&copy; 2025 Loja G-TEC Multimarcas. Todos os direitos reservados.</p>
+      </div>
+    </footer>
+  </body>
+</html>

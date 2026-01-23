@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -15,6 +16,7 @@ import (
 	"strings"
 
 	"lojagtec/internal/admin"
+	"lojagtec/internal/checkout"
 	"lojagtec/internal/database"
 	"lojagtec/internal/orders"
 	"lojagtec/internal/products"
@@ -88,6 +90,54 @@ func main() {
 		tmpl.Execute(w, nil)
 	})
 
+	http.HandleFunc("/checkout/success", func(w http.ResponseWriter, r *http.Request) {
+		orderID, err := strconv.Atoi(r.URL.Query().Get("order_id"))
+		if err != nil {
+			http.Error(w, "Invalid order ID", http.StatusBadRequest)
+			return
+		}
+
+		order, err := orders.GetOrderByID(orderID)
+		if err != nil {
+			http.Error(w, "Pedido não encontrado", http.StatusNotFound)
+			return
+		}
+
+		tmpl, err := template.ParseFiles("web/templates/checkout-success-page.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		tmpl.Execute(w, map[string]interface{}{
+			"Order": order,
+		})
+	})
+
+	http.HandleFunc("/checkout/cancel", func(w http.ResponseWriter, r *http.Request) {
+		orderID, err := strconv.Atoi(r.URL.Query().Get("order_id"))
+		if err != nil {
+			http.Error(w, "Invalid order ID", http.StatusBadRequest)
+			return
+		}
+
+		order, err := orders.GetOrderByID(orderID)
+		if err != nil {
+			http.Error(w, "Pedido não encontrado", http.StatusNotFound)
+			return
+		}
+
+		tmpl, err := template.ParseFiles("web/templates/checkout-cancel-page.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		tmpl.Execute(w, map[string]interface{}{
+			"Order": order,
+		})
+	})
+
 	// Checkout endpoint for order processing
 	http.HandleFunc("/api/checkout", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -113,13 +163,8 @@ func main() {
 			State:         r.FormValue("state"),
 			ZipCode:       r.FormValue("zipCode"),
 			Apartment:     r.FormValue("apartment"),
-			PaymentMethod: r.FormValue("paymentMethod"),
-			CardName:      r.FormValue("cardName"),
-			CardNumber:    r.FormValue("cardNumber"),
-			Expiry:        r.FormValue("expiry"),
-			CVV:           r.FormValue("cvv"),
 			CPF:           r.FormValue("cpf"),
-			PixKey:        r.FormValue("pixKey"),
+			PaymentMethod: r.FormValue("paymentMethod"),
 		}
 
 		// Parse cart items from form data
@@ -161,29 +206,52 @@ func main() {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
+			if errors.Is(err, orders.ErrInstallationServiceUnavailable) || errors.Is(err, orders.ErrInvalidCartItem) {
+				tmpl.Execute(w, orders.ValidationError{Field: "cart", Message: err.Error()})
+				return
+			}
 			tmpl.Execute(w, orders.ValidationError{Field: "general", Message: "Erro ao processar pedido: " + err.Error()})
 			return
 		}
 
-		// TODO: Process payment with Stripe here
-		// For now, we'll mark as paid for demo purposes
-		err = orders.UpdateOrderPaymentStatus(order.ID, "paid", "demo_payment_id")
+		stripeSessionURL, err := checkout.CreateCheckoutSession(form, order)
 		if err != nil {
-			log.Printf("Failed to update payment status: %v", err)
-		}
+			var validationErr checkout.ValidationError
+			if errors.Is(err, checkout.ErrStripeNotConfigured) {
+				tmpl, parseErr := template.ParseFiles("web/templates/validation-error.html")
+				if parseErr != nil {
+					http.Error(w, "Stripe configuration error", http.StatusInternalServerError)
+					return
+				}
+				tmpl.Execute(w, orders.ValidationError{Field: "general", Message: "Pagamento temporariamente indisponível."})
+				return
+			}
+			if errors.As(err, &validationErr) {
+				tmpl, parseErr := template.ParseFiles("web/templates/validation-error.html")
+				if parseErr != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				tmpl.Execute(w, orders.ValidationError{Field: validationErr.Field, Message: validationErr.Message})
+				return
+			}
 
-		// Return success response with order details
-		w.Header().Set("Content-Type", "text/html")
-		tmpl, err := template.ParseFiles("web/templates/checkout-success.html")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Printf("Failed to create Stripe session: %v", err)
+			tmpl, parseErr := template.ParseFiles("web/templates/validation-error.html")
+			if parseErr != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			tmpl.Execute(w, orders.ValidationError{Field: "general", Message: "Erro ao iniciar pagamento. Tente novamente."})
 			return
 		}
 
-		// Execute template with order data
-		tmpl.Execute(w, map[string]interface{}{
-			"Order": order,
-		})
+		w.Header().Set("HX-Redirect", stripeSessionURL)
+		w.WriteHeader(http.StatusOK)
+	})
+
+	http.HandleFunc("/api/stripe/webhook", func(w http.ResponseWriter, r *http.Request) {
+		checkout.HandleStripeWebhook(w, r)
 	})
 
 	// Product filter routes

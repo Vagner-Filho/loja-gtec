@@ -62,3 +62,7 @@ CREATE TABLE IF NOT EXISTS order_items (
     total_price DECIMAL(10,2) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+INSERT INTO items (name, price, image, is_available) VALUES ('Serviço de Instalação', 120.00, '/static/images/instalacao.svg', TRUE);
+INSERT INTO services (description, item_id) VALUES ('Instalação profissional, certificada e de garantia para produtos comprados na loja.', 1);
+INSERT INTO admin_users (username, password_hash) VALUES ('admin', '$2a$10$tZagoo6qCSR5NY98NVEI9.jxVF.C8ylrbXqu6lXxI5Jhu1qDwXnN.');
