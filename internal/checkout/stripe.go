@@ -95,6 +95,7 @@ func HandleStripeWebhook(w http.ResponseWriter, r *http.Request) {
 
 	payload, err := io.ReadAll(r.Body)
 	if err != nil {
+		fmt.Printf("read payload: %v", err.Error())
 		http.Error(w, "Failed to read payload", http.StatusBadRequest)
 		return
 	}
@@ -102,39 +103,56 @@ func HandleStripeWebhook(w http.ResponseWriter, r *http.Request) {
 	sigHeader := r.Header.Get("Stripe-Signature")
 	event, err := webhook.ConstructEvent(payload, sigHeader, webhookSecret)
 	if err != nil {
+		fmt.Printf("sigHeader: %v", sigHeader)
+		fmt.Printf("signature: %v", err.Error())
 		http.Error(w, "Invalid signature", http.StatusBadRequest)
 		return
 	}
 
-	var session stripe.CheckoutSession
-	if err := json.Unmarshal(event.Data.Raw, &session); err != nil {
-		http.Error(w, "Invalid payload", http.StatusBadRequest)
-		return
-	}
-
-	orderID, err := strconv.Atoi(session.Metadata["order_id"])
-	if err != nil {
-		http.Error(w, "Missing order metadata", http.StatusBadRequest)
-		return
-	}
-
-	stripePaymentID := session.ID
-	if session.PaymentIntent != nil {
-		stripePaymentID = session.PaymentIntent.ID
-	}
-
 	switch event.Type {
-	case "checkout.session.completed", "checkout.session.async_payment_succeeded":
-		if err := orders.UpdateOrderPaymentStatus(orderID, "paid", stripePaymentID); err != nil {
-			log.Printf("Failed to update payment status: %v", err)
+	case "checkout.session.completed", "checkout.session.async_payment_succeeded", "checkout.session.async_payment_failed":
+		var session stripe.CheckoutSession
+		if err := json.Unmarshal(event.Data.Raw, &session); err != nil {
+			fmt.Printf("payload unmarshal: %v", err.Error())
+			http.Error(w, "Invalid payload", http.StatusBadRequest)
+			return
 		}
-	case "checkout.session.async_payment_failed":
-		if err := orders.UpdateOrderPaymentStatus(orderID, "failed", stripePaymentID); err != nil {
-			log.Printf("Failed to update payment status: %v", err)
-		}
-	}
 
-	w.WriteHeader(http.StatusOK)
+		orderIDText := strings.TrimSpace(session.Metadata["order_id"])
+		if orderIDText == "" {
+			fmt.Printf("\nmetadata: %+v", session.Metadata)
+			http.Error(w, "Missing order metadata", http.StatusBadRequest)
+			return
+		}
+
+		orderID, err := strconv.Atoi(orderIDText)
+		if err != nil {
+			fmt.Printf("\nmetadata: %+v", session.Metadata)
+			fmt.Printf("\nmetadata err: %v", err.Error())
+			http.Error(w, "Invalid order metadata", http.StatusBadRequest)
+			return
+		}
+
+		stripePaymentID := session.ID
+		if session.PaymentIntent != nil {
+			stripePaymentID = session.PaymentIntent.ID
+		}
+
+		switch event.Type {
+		case "checkout.session.completed", "checkout.session.async_payment_succeeded":
+			if err := orders.UpdateOrderPaymentStatus(orderID, "paid", stripePaymentID); err != nil {
+				log.Printf("Failed to update payment status: %v", err)
+			}
+		case "checkout.session.async_payment_failed":
+			if err := orders.UpdateOrderPaymentStatus(orderID, "failed", stripePaymentID); err != nil {
+				log.Printf("Failed to update payment status: %v", err)
+			}
+		}
+
+		w.WriteHeader(http.StatusOK)
+	default:
+		w.WriteHeader(http.StatusOK)
+	}
 }
 
 func stripePaymentMethodTypes(method string) ([]*string, error) {

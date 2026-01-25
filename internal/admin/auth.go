@@ -15,12 +15,14 @@ type Admin struct {
 	ID           int
 	Username     string
 	PasswordHash string
+	Role         string
 	CreatedAt    time.Time
 }
 
 type Session struct {
 	Token     string
 	AdminID   int
+	Role      string
 	ExpiresAt time.Time
 }
 
@@ -48,14 +50,19 @@ func CheckPassword(password, hash string) bool {
 
 // CreateAdmin creates a new admin user
 func CreateAdmin(username, password string) error {
+	return CreateAdminWithRole(username, password, "admin")
+}
+
+// CreateAdminWithRole creates a new admin user with a role
+func CreateAdminWithRole(username, password, role string) error {
 	hash, err := HashPassword(password)
 	if err != nil {
 		return err
 	}
 
 	_, err = db.Exec(
-		"INSERT INTO admin_users (username, password_hash, created_at) VALUES ($1, $2, $3)",
-		username, hash, time.Now(),
+		"INSERT INTO admin_users (username, password_hash, role, created_at) VALUES ($1, $2, $3, $4)",
+		username, hash, role, time.Now(),
 	)
 	return err
 }
@@ -64,9 +71,9 @@ func CreateAdmin(username, password string) error {
 func GetAdminByUsername(username string) (*Admin, error) {
 	var admin Admin
 	err := db.QueryRow(
-		"SELECT id, username, password_hash, created_at FROM admin_users WHERE username = $1",
+		"SELECT id, username, password_hash, role, created_at FROM admin_users WHERE username = $1",
 		username,
-	).Scan(&admin.ID, &admin.Username, &admin.PasswordHash, &admin.CreatedAt)
+	).Scan(&admin.ID, &admin.Username, &admin.PasswordHash, &admin.Role, &admin.CreatedAt)
 
 	if err != nil {
 		return nil, err
@@ -85,7 +92,7 @@ func generateSessionToken() (string, error) {
 }
 
 // CreateSession creates a new session for an admin
-func CreateSession(adminID int) (string, error) {
+func CreateSession(adminID int, role string) (string, error) {
 	token, err := generateSessionToken()
 	if err != nil {
 		return "", err
@@ -94,6 +101,7 @@ func CreateSession(adminID int) (string, error) {
 	session := Session{
 		Token:     token,
 		AdminID:   adminID,
+		Role:      role,
 		ExpiresAt: time.Now().Add(24 * time.Hour),
 	}
 
@@ -132,7 +140,7 @@ func Login(w http.ResponseWriter, username, password string) error {
 		return fmt.Errorf("Credenciais Inválidas")
 	}
 
-	token, err := CreateSession(admin.ID)
+	token, err := CreateSession(admin.ID, admin.Role)
 	if err != nil {
 		return err
 	}
@@ -185,6 +193,37 @@ func RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// RequireRole ensures the admin has one of the allowed roles
+func RequireRole(roles ...string) func(http.HandlerFunc) http.HandlerFunc {
+	allowed := make(map[string]struct{}, len(roles))
+	for _, role := range roles {
+		allowed[role] = struct{}{}
+	}
+
+	return func(next http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			cookie, err := r.Cookie(sessionCookieName)
+			if err != nil {
+				http.Redirect(w, r, "/admin/login", http.StatusSeeOther)
+				return
+			}
+
+			session, valid := GetSession(cookie.Value)
+			if !valid {
+				http.Redirect(w, r, "/admin/login", http.StatusSeeOther)
+				return
+			}
+
+			if _, ok := allowed[session.Role]; !ok {
+				http.Error(w, "Forbidden", http.StatusForbidden)
+				return
+			}
+
+			next(w, r)
+		}
+	}
+}
+
 // IsAuthenticated checks if the current request is authenticated
 func IsAuthenticated(r *http.Request) bool {
 	cookie, err := r.Cookie(sessionCookieName)
@@ -194,4 +233,19 @@ func IsAuthenticated(r *http.Request) bool {
 
 	_, valid := GetSession(cookie.Value)
 	return valid
+}
+
+// RoleFromRequest returns the role for the authenticated admin
+func RoleFromRequest(r *http.Request) (string, bool) {
+	cookie, err := r.Cookie(sessionCookieName)
+	if err != nil {
+		return "", false
+	}
+
+	session, valid := GetSession(cookie.Value)
+	if !valid {
+		return "", false
+	}
+
+	return session.Role, true
 }

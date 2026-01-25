@@ -1,11 +1,11 @@
 <form id="edit-product-form" class="grid grid-cols-1 md:grid-cols-2 gap-4" 
-      hx-put="/api/admin/products/{{.ID}}"
-      hx-target='[data-product-id="{{.ID}}"]'
+      hx-put="/api/admin/products/{{.Product.ID}}"
+      hx-target='[data-product-id="{{.Product.ID}}"]'
       hx-swap="outerHTML"
       hx-indicator="#edit-loading"
       enctype="multipart/form-data">
-  <input type="hidden" name="id" value="{{.ID}}">
-  <input type="hidden" name="current_image" value="{{.Image}}">
+  <input type="hidden" name="id" value="{{.Product.ID}}">
+  <input type="hidden" name="current_image" value="{{.Product.Image}}">
 
   <div>
     <label for="edit-name" class="block text-sm font-medium text-gray-700 mb-2">Nome do Produto</label>
@@ -13,7 +13,7 @@
       type="text" 
       id="edit-name" 
       name="name" 
-      value="{{.Name}}"
+        value="{{.Product.Name}}"
       required
       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
     >
@@ -25,7 +25,7 @@
       type="number" 
       id="edit-price" 
       name="price" 
-      value="{{.Price}}"
+        value="{{.Product.Price}}"
       step="0.01"
       required
       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
@@ -40,11 +40,41 @@
       required
       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
     >
-      <option value="bebedouros" {{if eq .Category "bebedouros"}}selected{{end}}>Bebedouros</option>
-      <option value="purificadores" {{if eq .Category "purificadores"}}selected{{end}}>Purificadores</option>
-      <option value="refis" {{if eq .Category "refis"}}selected{{end}}>Refis</option>
-      <option value="pecas" {{if eq .Category "pecas"}}selected{{end}}>Peças</option>
+      <option value="bebedouros" {{if eq .Product.Category "bebedouros"}}selected{{end}}>Bebedouros</option>
+      <option value="purificadores" {{if eq .Product.Category "purificadores"}}selected{{end}}>Purificadores</option>
+      <option value="refis" {{if eq .Product.Category "refis"}}selected{{end}}>Refis</option>
+      <option value="pecas" {{if eq .Product.Category "pecas"}}selected{{end}}>Peças</option>
     </select>
+  </div>
+
+  <div>
+    <label for="edit-brand_ids" class="block text-sm font-medium text-gray-700 mb-2">Marcas</label>
+    <select
+      id="edit-brand_ids"
+      name="brand_ids"
+      multiple
+      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+    >
+      {{range .Brands}}
+        <option value="{{.ID}}" {{if index $.BrandSelections .ID}}selected{{end}}>{{.Name}}</option>
+      {{end}}
+    </select>
+    <p class="text-xs text-gray-500 mt-1">Use Ctrl/Cmd para selecionar mais de uma marca.</p>
+  </div>
+
+  <div>
+    <label for="edit-fits_product_ids" class="block text-sm font-medium text-gray-700 mb-2">Compatível com</label>
+    <select
+      id="edit-fits_product_ids"
+      name="fits_product_ids"
+      multiple
+      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+    >
+      {{range .Products}}
+        <option value="{{.ID}}" {{if index $.FitSelections .ID}}selected{{end}}>{{.Name}}</option>
+      {{end}}
+    </select>
+    <p class="text-xs text-gray-500 mt-1">Aplicável apenas para Refis e Peças.</p>
   </div>
 
   <div>
@@ -60,7 +90,7 @@
 
   <div class="md:col-span-2">
     <label class="block text-sm font-medium text-gray-700 mb-2">Imagem Atual</label>
-    <img src="{{.Image}}" alt="Current product image" class="w-32 h-32 object-contain border border-gray-300 rounded mb-2">
+    <img src="{{.Product.Image}}" alt="Current product image" class="w-32 h-32 object-contain border border-gray-300 rounded mb-2">
     <div id="edit-image-preview" class="hidden">
       <label class="block text-sm font-medium text-gray-700 mb-2">Prévia Nova Imagem</label>
       <img id="edit-preview-img" src="" alt="Preview" class="w-32 h-32 object-contain border border-gray-300 rounded">
@@ -73,7 +103,7 @@
       class="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
       name="is_available"
       id="edit-is_available"
-      {{if .IsAvailable}}checked{{end}}
+      {{if .Product.IsAvailable}}checked{{end}}
     />
     <label for="edit-is_available" class="ml-2 text-sm font-medium text-gray-700">Produto em Estoque</label>
   </div>

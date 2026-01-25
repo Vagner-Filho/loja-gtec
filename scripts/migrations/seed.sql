@@ -21,5 +21,5 @@ CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 
 -- Create a default admin user (username: admin, password: admin123)
 -- Password hash for 'admin123' using bcrypt
-INSERT INTO admin_users (username, password_hash) VALUES
-    ('admin', '$2a$10$tZagoo6qCSR5NY98NVEI9.jxVF.C8ylrbXqu6lXxI5Jhu1qDwXnN.');
+INSERT INTO admin_users (username, password_hash, role) VALUES
+	('admin', '$2a$10$tZagoo6qCSR5NY98NVEI9.jxVF.C8ylrbXqu6lXxI5Jhu1qDwXnN.', 'admin');
