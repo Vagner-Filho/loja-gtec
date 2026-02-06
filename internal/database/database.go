@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"os"
 
 	"github.com/BurntSushi/toml"
 	_ "github.com/lib/pq"
@@ -42,4 +43,19 @@ func Connect() (*sql.DB, error) {
 
 	fmt.Println("Successfully connected to the database!")
 	return db, nil
+}
+
+func RunSchema(db *sql.DB) error {
+	schema, err := os.ReadFile("scripts/schema/schema.sql")
+	if err != nil {
+		return fmt.Errorf("failed to read schema file: %w", err)
+	}
+
+	_, err = db.Exec(string(schema))
+	if err != nil {
+		return fmt.Errorf("failed to execute schema: %w", err)
+	}
+
+	fmt.Println("Database schema applied successfully!")
+	return nil
 }

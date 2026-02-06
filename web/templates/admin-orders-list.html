@@ -1,4 +1,5 @@
 {{- if .Orders }}
+  {{- if .CanViewFinancialData }}
   <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
     <div class="border border-gray-200 rounded-lg p-4 shadow-sm">
       <div class="text-sm text-gray-500">Total geral</div>
@@ -26,6 +27,7 @@
       </div>
     </div>
   </div>
+  {{- end }}
 
   {{- range .Orders }}
     <div class="border border-gray-200 rounded-lg p-4 shadow-sm">
@@ -40,7 +42,9 @@
           <span class="px-3 py-1 text-sm rounded-full bg-blue-100 text-blue-700">{{ .Status }}</span>
           <span class="px-3 py-1 text-sm rounded-full bg-green-100 text-green-700">{{ .PaymentStatus }}</span>
           <span class="px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-700">{{ .PaymentMethod }}</span>
+          {{- if $.CanViewFinancialData }}
           <span class="px-3 py-1 text-sm rounded-full bg-yellow-100 text-yellow-700">R$ {{ printf "%.2f" .TotalAmount }}</span>
+          {{- end }}
         </div>
         <div>
           <button

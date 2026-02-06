@@ -55,6 +55,11 @@ func CreateAdmin(username, password string) error {
 
 // CreateAdminWithRole creates a new admin user with a role
 func CreateAdminWithRole(username, password, role string) error {
+	validRoles := map[string]bool{"admin": true, "product_admin": true}
+	if !validRoles[role] {
+		return fmt.Errorf("função inválida: %s (permitidas: admin, product_admin)", role)
+	}
+
 	hash, err := HashPassword(password)
 	if err != nil {
 		return err

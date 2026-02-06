@@ -53,6 +53,11 @@ func main() {
 	}
 	defer db.Close()
 
+	// Apply database schema
+	if err := database.RunSchema(db); err != nil {
+		log.Fatalf("Could not apply database schema: %v", err)
+	}
+
 	// Set database for packages
 	products.SetDatabase(db)
 	admin.SetDatabase(db)
@@ -417,7 +422,6 @@ func main() {
 	})
 
 	http.HandleFunc("/admin", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
-		role, _ := admin.RoleFromRequest(r)
 		brands, err := products.GetAllBrands()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -434,7 +438,7 @@ func main() {
 			return
 		}
 		tmpl.Execute(w, adminDashboardData{
-			CanViewOrders: role == "admin",
+			CanViewOrders: true,
 			Brands:        brands,
 			Products:      productOptions,
 		})
@@ -453,7 +457,7 @@ func main() {
 		tmpl.Execute(w, brandModalData{})
 	}))
 
-	http.HandleFunc("/admin/orders", admin.RequireRole("admin")(func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/admin/orders", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
 		tmpl, err := template.ParseFiles("web/templates/admin-orders.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -463,7 +467,7 @@ func main() {
 	}))
 
 	// Admin API routes
-	http.HandleFunc("/api/admin/orders", admin.RequireRole("admin")(func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/admin/orders", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -485,11 +489,8 @@ func main() {
 			return
 		}
 
-		totals, err := orders.GetOrderTotals(filters)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		role, _ := admin.RoleFromRequest(r)
+		canViewFinancialData := role == "admin"
 
 		w.Header().Set("Content-Type", "text/html")
 		tmpl, err := template.ParseFiles("web/templates/admin-orders-list.html")
@@ -497,10 +498,22 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		tmpl.Execute(w, map[string]interface{}{
-			"Orders": ordersList,
-			"Totals": totals,
-		})
+
+		data := map[string]interface{}{
+			"Orders":               ordersList,
+			"CanViewFinancialData": canViewFinancialData,
+		}
+
+		if canViewFinancialData {
+			totals, err := orders.GetOrderTotals(filters)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			data["Totals"] = totals
+		}
+
+		tmpl.Execute(w, data)
 	}))
 
 	http.HandleFunc("/api/admin/brands/options", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
@@ -557,7 +570,7 @@ func main() {
 		json.NewEncoder(w).Encode(brand)
 	}))
 
-	http.HandleFunc("/api/admin/orders/", admin.RequireRole("admin")(func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/admin/orders/", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -576,6 +589,9 @@ func main() {
 			return
 		}
 
+		role, _ := admin.RoleFromRequest(r)
+		canViewFinancialData := role == "admin"
+
 		w.Header().Set("Content-Type", "text/html")
 		tmpl, err := template.ParseFiles("web/templates/admin-order-detail.html")
 		if err != nil {
@@ -583,8 +599,9 @@ func main() {
 			return
 		}
 		tmpl.Execute(w, map[string]interface{}{
-			"Order": order,
-			"Items": items,
+			"Order":                order,
+			"Items":                items,
+			"CanViewFinancialData": canViewFinancialData,
 		})
 	}))
 

@@ -35,16 +35,20 @@
             <div class="font-semibold">{{ .ProductName }}</div>
             <div>Qtd: {{ .Quantity }}</div>
           </div>
+          {{- if $.CanViewFinancialData }}
           <div class="text-right">
             <div>R$ {{ printf "%.2f" .UnitPrice }}</div>
             <div class="text-gray-500">Total: R$ {{ printf "%.2f" .TotalPrice }}</div>
           </div>
+          {{- end }}
         </div>
       {{- end }}
     </div>
   </div>
 
+  {{- if .CanViewFinancialData }}
   <div class="flex justify-end">
     <div class="text-lg font-semibold text-gray-800">Total: R$ {{ printf "%.2f" .Order.TotalAmount }}</div>
   </div>
+  {{- end }}
 </div>
