@@ -46,6 +46,7 @@ func Connect() (*sql.DB, error) {
 }
 
 func RunSchema(db *sql.DB) error {
+	return nil
 	schema, err := os.ReadFile("scripts/schema/schema.sql")
 	if err != nil {
 		return fmt.Errorf("failed to read schema file: %w", err)

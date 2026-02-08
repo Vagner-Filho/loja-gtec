@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"lojagtec/internal/admin"
 	"lojagtec/internal/checkout"
@@ -46,6 +47,97 @@ type brandModalData struct {
 	Error string
 }
 
+// setCacheHeaders sets HTTP cache headers for HTMX modal responses
+func setCacheHeaders(w http.ResponseWriter, maxAgeSeconds int) {
+	w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d", maxAgeSeconds))
+	w.Header().Set("Expires", time.Now().Add(time.Duration(maxAgeSeconds)*time.Second).Format(http.TimeFormat))
+}
+
+// translateStatus translates order status from English to Portuguese
+func translateStatus(status string) string {
+	switch status {
+	case "pending":
+		return "Pendente"
+	case "processing":
+		return "Em processamento"
+	case "shipped":
+		return "Enviado"
+	case "completed":
+		return "Concluído"
+	case "cancelled":
+		return "Cancelado"
+	default:
+		return status
+	}
+}
+
+// translatePaymentStatus translates payment status from English to Portuguese
+func translatePaymentStatus(status string) string {
+	switch status {
+	case "paid":
+		return "Pago"
+	case "pending":
+		return "Pendente"
+	case "failed":
+		return "Falhou"
+	case "waiting":
+		return "Aguardando"
+	default:
+		return status
+	}
+}
+
+// translatePaymentMethod translates payment method from English to Portuguese
+func translatePaymentMethod(method string) string {
+	switch method {
+	case "credit_card":
+		return "Cartão de Crédito"
+	case "boleto":
+		return "Boleto"
+	case "pix":
+		return "PIX"
+	default:
+		return method
+	}
+}
+
+// parseBrandIDs parses a comma-separated string of brand IDs into a slice of ints
+func parseBrandIDs(brands string) []int {
+	if brands == "" {
+		return nil
+	}
+
+	parts := strings.Split(brands, ",")
+	var brandIDs []int
+	for _, part := range parts {
+		id, err := strconv.Atoi(strings.TrimSpace(part))
+		if err == nil && id > 0 {
+			brandIDs = append(brandIDs, id)
+		}
+	}
+	return brandIDs
+}
+
+// orderFuncMap returns a template.FuncMap with order-related helper functions
+func orderFuncMap() template.FuncMap {
+	return template.FuncMap{
+		"translateStatus":        translateStatus,
+		"translatePaymentStatus": translatePaymentStatus,
+		"translatePaymentMethod": translatePaymentMethod,
+	}
+}
+
+// cacheControlWrapper wraps a handler to add cache control headers
+type cacheControlWrapper struct {
+	handler http.Handler
+	maxAge  int
+}
+
+func (w cacheControlWrapper) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	setCacheHeaders(res, w.maxAge)
+	w.handler.ServeHTTP(res, req)
+}
+
 func main() {
 	db, err := database.Connect()
 	if err != nil {
@@ -69,7 +161,7 @@ func main() {
 	}
 
 	fs := http.FileServer(http.Dir("web/static"))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	http.Handle("/static/", http.StripPrefix("/static/", cacheControlWrapper{handler: fs, maxAge: 86400}))
 
 	// Cart modal route (must be before catch-all "/")
 	http.HandleFunc("/cart-modal", func(w http.ResponseWriter, r *http.Request) {
@@ -280,7 +372,8 @@ func main() {
 
 	// Product filter routes
 	http.HandleFunc("/products/bebedouros", func(w http.ResponseWriter, r *http.Request) {
-		prods, err := products.GetProductsByCategory("bebedouros")
+		brandIDs := parseBrandIDs(r.URL.Query().Get("brands"))
+		prods, err := products.GetProductsByCategoryAndBrands("bebedouros", brandIDs)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -301,7 +394,8 @@ func main() {
 	})
 
 	http.HandleFunc("/products/purificadores", func(w http.ResponseWriter, r *http.Request) {
-		prods, err := products.GetProductsByCategory("purificadores")
+		brandIDs := parseBrandIDs(r.URL.Query().Get("brands"))
+		prods, err := products.GetProductsByCategoryAndBrands("purificadores", brandIDs)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -321,7 +415,8 @@ func main() {
 	})
 
 	http.HandleFunc("/products/refis", func(w http.ResponseWriter, r *http.Request) {
-		prods, err := products.GetProductsByCategory("refis")
+		brandIDs := parseBrandIDs(r.URL.Query().Get("brands"))
+		prods, err := products.GetProductsByCategoryAndBrands("refis", brandIDs)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -341,7 +436,8 @@ func main() {
 	})
 
 	http.HandleFunc("/products/pecas", func(w http.ResponseWriter, r *http.Request) {
-		prods, err := products.GetProductsByCategory("pecas")
+		brandIDs := parseBrandIDs(r.URL.Query().Get("brands"))
+		prods, err := products.GetProductsByCategoryAndBrands("pecas", brandIDs)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -361,7 +457,8 @@ func main() {
 	})
 
 	http.HandleFunc("/products/all", func(w http.ResponseWriter, r *http.Request) {
-		prods, err := products.GetAllProducts()
+		brandIDs := parseBrandIDs(r.URL.Query().Get("brands"))
+		prods, err := products.GetProductsByCategoryAndBrands("", brandIDs)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -378,6 +475,25 @@ func main() {
 			return
 		}
 		tmpl.Execute(w, prods)
+	})
+
+	// Brands endpoint for filter UI
+	http.HandleFunc("/api/brands", func(w http.ResponseWriter, r *http.Request) {
+		brands, err := products.GetAllBrands()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html")
+		for _, brand := range brands {
+			fmt.Fprintf(w, `<button type="button" 
+				data-brand-id="%d" 
+				class="brand-filter-btn px-3 py-1 rounded-full text-sm transition-colors duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300"
+				onclick="toggleBrandFilter(this)">
+				%s
+			</button>`, brand.ID, brand.Name)
+		}
 	})
 
 	// Admin routes
@@ -493,7 +609,8 @@ func main() {
 		canViewFinancialData := role == "admin"
 
 		w.Header().Set("Content-Type", "text/html")
-		tmpl, err := template.ParseFiles("web/templates/admin-orders-list.html")
+		funcMap := orderFuncMap()
+		tmpl, err := template.New("admin-orders-list.html").Funcs(funcMap).ParseFiles("web/templates/admin-orders-list.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -553,6 +670,7 @@ func main() {
 					http.Error(w, tmplErr.Error(), http.StatusInternalServerError)
 					return
 				}
+				setCacheHeaders(w, 86400) // 1 day cache for modal template
 				w.WriteHeader(http.StatusBadRequest)
 				tmpl.Execute(w, brandModalData{Name: name, Error: err.Error()})
 				return
@@ -593,7 +711,8 @@ func main() {
 		canViewFinancialData := role == "admin"
 
 		w.Header().Set("Content-Type", "text/html")
-		tmpl, err := template.ParseFiles("web/templates/admin-order-detail.html")
+		funcMap := orderFuncMap()
+		tmpl, err := template.New("admin-order-detail.html").Funcs(funcMap).ParseFiles("web/templates/admin-order-detail.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -601,6 +720,88 @@ func main() {
 		tmpl.Execute(w, map[string]interface{}{
 			"Order":                order,
 			"Items":                items,
+			"CanViewFinancialData": canViewFinancialData,
+		})
+	}))
+
+	http.HandleFunc("/api/admin/orders/{id}/status-modal", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		path := strings.TrimPrefix(r.URL.Path, "/api/admin/orders/")
+		path = strings.TrimSuffix(path, "/status-modal")
+		id, err := strconv.Atoi(path)
+		if err != nil {
+			http.Error(w, "Invalid order ID", http.StatusBadRequest)
+			return
+		}
+
+		order, err := orders.GetOrderByID(id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		setCacheHeaders(w, 86400) // 1 day cache for static modal
+		w.Header().Set("Content-Type", "text/html")
+		tmpl, err := template.ParseFiles("web/templates/admin-order-status-modal.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		tmpl.Execute(w, map[string]interface{}{
+			"OrderID":       order.ID,
+			"CurrentStatus": order.Status,
+		})
+	}))
+
+	http.HandleFunc("/api/admin/orders/{id}/status", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		path := strings.TrimPrefix(r.URL.Path, "/api/admin/orders/")
+		path = strings.TrimSuffix(path, "/status")
+		id, err := strconv.Atoi(path)
+		if err != nil {
+			http.Error(w, "Invalid order ID", http.StatusBadRequest)
+			return
+		}
+
+		status := r.FormValue("status")
+		if status == "" {
+			http.Error(w, "Status is required", http.StatusBadRequest)
+			return
+		}
+
+		err = orders.UpdateOrderStatus(id, status)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Return the updated order row
+		order, err := orders.GetOrderByID(id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		role, _ := admin.RoleFromRequest(r)
+		canViewFinancialData := role == "admin"
+
+		w.Header().Set("Content-Type", "text/html")
+		funcMap := orderFuncMap()
+		tmpl, err := template.New("admin-order-row.html").Funcs(funcMap).ParseFiles("web/templates/admin-order-row.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		tmpl.Execute(w, map[string]interface{}{
+			"Order":                order,
 			"CanViewFinancialData": canViewFinancialData,
 		})
 	}))

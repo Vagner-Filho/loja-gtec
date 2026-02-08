@@ -35,6 +35,8 @@
     --color-blue-600: oklch(54.6% 0.245 262.881);
     --color-blue-700: oklch(48.8% 0.243 264.376);
     --color-blue-800: oklch(42.4% 0.199 265.638);
+    --color-indigo-100: oklch(93% 0.034 272.788);
+    --color-indigo-700: oklch(45.7% 0.24 277.023);
     --color-purple-50: oklch(97.7% 0.014 308.299);
     --color-purple-200: oklch(90.2% 0.063 306.703);
     --color-purple-500: oklch(62.7% 0.265 303.9);
@@ -661,9 +663,6 @@
   .bg-blue-50 {
     background-color: var(--color-blue-50);
   }
-  .bg-blue-100 {
-    background-color: var(--color-blue-100);
-  }
   .bg-blue-500 {
     background-color: var(--color-blue-500);
   }
@@ -687,6 +686,9 @@
   }
   .bg-gray-400 {
     background-color: var(--color-gray-400);
+  }
+  .bg-gray-600 {
+    background-color: var(--color-gray-600);
   }
   .bg-gray-800 {
     background-color: var(--color-gray-800);
@@ -1137,10 +1139,24 @@
       }
     }
   }
+  .hover\:bg-gray-700 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-gray-700);
+      }
+    }
+  }
   .hover\:bg-green-700 {
     &:hover {
       @media (hover: hover) {
         background-color: var(--color-green-700);
+      }
+    }
+  }
+  .hover\:bg-red-200 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-red-200);
       }
     }
   }
@@ -1335,6 +1351,34 @@
       grid-template-columns: repeat(4, minmax(0, 1fr));
     }
   }
+}
+.status-badge {
+  display: inline-block;
+  border-radius: calc(infinity * 1px);
+  padding-inline: calc(var(--spacing) * 3);
+  padding-block: calc(var(--spacing) * 1);
+  font-size: var(--text-sm);
+  line-height: var(--tw-leading, var(--text-sm--line-height));
+}
+.status-pending {
+  background-color: var(--color-yellow-100);
+  color: var(--color-yellow-700);
+}
+.status-processing {
+  background-color: var(--color-blue-100);
+  color: var(--color-blue-700);
+}
+.status-shipped {
+  background-color: var(--color-indigo-100);
+  color: var(--color-indigo-700);
+}
+.status-completed {
+  background-color: var(--color-green-100);
+  color: var(--color-green-700);
+}
+.status-cancelled {
+  background-color: var(--color-red-100);
+  color: var(--color-red-700);
 }
 @property --tw-scale-x {
   syntax: "*";

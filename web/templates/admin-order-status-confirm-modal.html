@@ -1,0 +1,25 @@
+<div id="status-confirm-modal">
+  <div class="mb-4">
+    <p class="text-lg text-gray-800">
+      Mudar o status da ordem para <strong class="font-semibold">{{ .StatusLabel }}</strong>?
+    </p>
+    <input type="hidden" id="confirm-order-id" value="{{ .OrderID }}">
+    <input type="hidden" id="confirm-status" value="{{ .Status }}">
+  </div>
+  <div class="flex justify-end gap-3">
+    <button
+      type="button"
+      onclick="window.backToStatusSelectModal()"
+      class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+    >
+      Voltar
+    </button>
+    <button
+      type="button"
+      onclick="window.submitStatusUpdate()"
+      class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+    >
+      Confirmar
+    </button>
+  </div>
+</div>

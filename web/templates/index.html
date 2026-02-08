@@ -36,49 +36,82 @@
     </header>
     <div class="flex justify-center items-center mx-auto gap-2 text-xl py-4" id="product-type-selection">
       <button type="button" 
+        id="btn-todos"
+        data-category="all"
         hx-get="/products/all" 
         hx-target="#products-container" 
         hx-swap="innerHTML" 
         hx-indicator="#loading"
-        class="px-4 py-2 rounded hover:bg-blue-100 transition-colors duration-200 product-filter-btn">
+        hx-on:click="document.querySelectorAll('.product-filter-btn').forEach(btn => btn.classList.remove('bg-blue-600', 'text-white')); this.classList.add('bg-blue-600', 'text-white')"
+        class="px-4 py-2 rounded hover:bg-blue-100 transition-colors duration-200 product-filter-btn bg-blue-600 text-white">
         Todos
       </button>
       <div class="w-0.5 h-6 bg-black"></div>
       <button type="button" 
+        id="btn-bebedouros"
+        data-category="bebedouros"
         hx-get="/products/bebedouros" 
         hx-target="#products-container" 
         hx-swap="innerHTML" 
         hx-indicator="#loading"
+        hx-on:click="document.querySelectorAll('.product-filter-btn').forEach(btn => btn.classList.remove('bg-blue-600', 'text-white')); this.classList.add('bg-blue-600', 'text-white')"
         class="px-4 py-2 rounded hover:bg-blue-100 transition-colors duration-200 product-filter-btn">
         Bebedouros
       </button>
       <div class="w-0.5 h-6 bg-black"></div>
       <button type="button" 
+        id="btn-purificadores"
+        data-category="purificadores"
         hx-get="/products/purificadores" 
         hx-target="#products-container" 
         hx-swap="innerHTML" 
         hx-indicator="#loading"
+        hx-on:click="document.querySelectorAll('.product-filter-btn').forEach(btn => btn.classList.remove('bg-blue-600', 'text-white')); this.classList.add('bg-blue-600', 'text-white')"
         class="px-4 py-2 rounded hover:bg-blue-100 transition-colors duration-200 product-filter-btn">
         Purificadores
       </button>
       <div class="w-0.5 h-6 bg-black"></div>
       <button type="button" 
+        id="btn-refis"
+        data-category="refis"
         hx-get="/products/refis" 
         hx-target="#products-container" 
         hx-swap="innerHTML" 
         hx-indicator="#loading"
+        hx-on:click="document.querySelectorAll('.product-filter-btn').forEach(btn => btn.classList.remove('bg-blue-600', 'text-white')); this.classList.add('bg-blue-600', 'text-white')"
         class="px-4 py-2 rounded hover:bg-blue-100 transition-colors duration-200 product-filter-btn">
         Refis
       </button>
       <div class="w-0.5 h-6 bg-black"></div>
       <button type="button" 
+        id="btn-pecas"
+        data-category="pecas"
         hx-get="/products/pecas" 
         hx-target="#products-container" 
         hx-swap="innerHTML" 
         hx-indicator="#loading"
+        hx-on:click="document.querySelectorAll('.product-filter-btn').forEach(btn => btn.classList.remove('bg-blue-600', 'text-white')); this.classList.add('bg-blue-600', 'text-white')"
         class="px-4 py-2 rounded hover:bg-blue-100 transition-colors duration-200 product-filter-btn">
         Peças
       </button>
+    </div>
+    <div class="container mx-auto px-4 py-2">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="text-sm text-gray-600">Marcas:</span>
+        <button type="button" 
+          id="clear-brands-btn"
+          class="text-xs px-2 py-1 rounded bg-red-100 text-red-600 hover:bg-red-200 transition-colors duration-200 hidden"
+          onclick="clearBrandFilters()">
+          Limpar marcas
+        </button>
+      </div>
+      <div id="brands-container" 
+        class="flex flex-wrap gap-2"
+        hx-get="/api/brands"
+        hx-trigger="load"
+        hx-target="#brands-container"
+        hx-swap="innerHTML">
+      </div>
     </div>
     <main class="container mx-auto px-4 py-8 flex-1">
       <div class="flex justify-between items-center mb-4">
@@ -110,5 +143,108 @@
     </footer>
     <div id="cart-container"></div>
     <script type="module" src="/static/js/cart.js"></script>
+    <script>
+      // Track selected brand IDs
+      let selectedBrands = [];
+      let currentCategory = 'all';
+
+      function getBrandQueryString() {
+        if (selectedBrands.length === 0) return '';
+        return '?brands=' + selectedBrands.join(',');
+      }
+
+      function updateProductFilterButtons() {
+        const brandParam = getBrandQueryString();
+        
+        // Update Todos button
+        const todosBtn = document.getElementById('btn-todos');
+        todosBtn.setAttribute('hx-get', '/products/all' + brandParam);
+        
+        // Update Bebedouros button
+        const bebedourosBtn = document.getElementById('btn-bebedouros');
+        bebedourosBtn.setAttribute('hx-get', '/products/bebedouros' + brandParam);
+        
+        // Update Purificadores button
+        const purificadoresBtn = document.getElementById('btn-purificadores');
+        purificadoresBtn.setAttribute('hx-get', '/products/purificadores' + brandParam);
+        
+        // Update Refis button
+        const refisBtn = document.getElementById('btn-refis');
+        refisBtn.setAttribute('hx-get', '/products/refis' + brandParam);
+        
+        // Update Pecas button
+        const pecasBtn = document.getElementById('btn-pecas');
+        pecasBtn.setAttribute('hx-get', '/products/pecas' + brandParam);
+        
+        // Re-initialize HTMX on these buttons
+        htmx.process(todosBtn);
+        htmx.process(bebedourosBtn);
+        htmx.process(purificadoresBtn);
+        htmx.process(refisBtn);
+        htmx.process(pecasBtn);
+      }
+
+      function toggleBrandFilter(btn) {
+        const brandId = parseInt(btn.getAttribute('data-brand-id'));
+        
+        if (selectedBrands.includes(brandId)) {
+          // Remove brand from selection
+          selectedBrands = selectedBrands.filter(id => id !== brandId);
+          btn.classList.remove('bg-blue-600', 'text-white');
+          btn.classList.add('bg-gray-200', 'text-gray-700');
+        } else {
+          // Add brand to selection
+          selectedBrands.push(brandId);
+          btn.classList.remove('bg-gray-200', 'text-gray-700');
+          btn.classList.add('bg-blue-600', 'text-white');
+        }
+        
+        // Show/hide clear button
+        const clearBtn = document.getElementById('clear-brands-btn');
+        if (selectedBrands.length > 0) {
+          clearBtn.classList.remove('hidden');
+        } else {
+          clearBtn.classList.add('hidden');
+        }
+        
+        // Update product filter URLs and refresh products
+        updateProductFilterButtons();
+        
+        // Trigger current category filter with new brand params
+        const activeBtn = document.querySelector('.product-filter-btn.bg-blue-600');
+        if (activeBtn) {
+          activeBtn.click();
+        }
+      }
+
+      function clearBrandFilters() {
+        selectedBrands = [];
+        
+        // Reset all brand buttons to unselected state
+        document.querySelectorAll('.brand-filter-btn').forEach(btn => {
+          btn.classList.remove('bg-blue-600', 'text-white');
+          btn.classList.add('bg-gray-200', 'text-gray-700');
+        });
+        
+        // Hide clear button
+        document.getElementById('clear-brands-btn').classList.add('hidden');
+        
+        // Update product filter URLs and refresh products
+        updateProductFilterButtons();
+        
+        // Trigger current category filter
+        const activeBtn = document.querySelector('.product-filter-btn.bg-blue-600');
+        if (activeBtn) {
+          activeBtn.click();
+        }
+      }
+
+      // Track which category is currently selected
+      document.querySelectorAll('.product-filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          currentCategory = this.getAttribute('data-category') || 'all';
+        });
+      });
+    </script>
   </body>
 </html>

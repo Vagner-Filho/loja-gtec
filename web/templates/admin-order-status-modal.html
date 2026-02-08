@@ -1,0 +1,29 @@
+<div id="status-select-modal">
+  <div class="mb-4">
+    <label class="block text-sm font-medium text-gray-700 mb-2">Novo Status</label>
+    <input type="hidden" id="order-id" value="{{ .OrderID }}">
+    <select id="status-select" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+      <option value="pending" {{ if eq .CurrentStatus "pending" }}selected{{ end }}>Pendente</option>
+      <option value="processing" {{ if eq .CurrentStatus "processing" }}selected{{ end }}>Processando</option>
+      <option value="shipped" {{ if eq .CurrentStatus "shipped" }}selected{{ end }}>Enviado</option>
+      <option value="completed" {{ if eq .CurrentStatus "completed" }}selected{{ end }}>Concluído</option>
+      <option value="cancelled" {{ if eq .CurrentStatus "cancelled" }}selected{{ end }}>Cancelado</option>
+    </select>
+  </div>
+  <div class="flex justify-end gap-3">
+    <button
+      type="button"
+      onclick="window.closeStatusModal()"
+      class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+    >
+      Cancelar
+    </button>
+    <button
+      type="button"
+      onclick="window.showStatusConfirmModal()"
+      class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+    >
+      Continuar
+    </button>
+  </div>
+</div>

@@ -554,6 +554,35 @@ func UpdateOrderStripePaymentID(orderID int, stripePaymentID string) error {
 	return err
 }
 
+// UpdateOrderStatus updates the status of an order
+func UpdateOrderStatus(orderID int, status string) error {
+	if db == nil {
+		return fmt.Errorf("database not initialized")
+	}
+
+	// Validate status value
+	validStatuses := map[string]bool{
+		"pending":    true,
+		"processing": true,
+		"shipped":    true,
+		"completed":  true,
+		"cancelled":  true,
+	}
+
+	if !validStatuses[status] {
+		return fmt.Errorf("invalid order status: %s", status)
+	}
+
+	query := `
+		UPDATE orders
+		SET status = $1, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2
+	`
+
+	_, err := db.Exec(query, status, orderID)
+	return err
+}
+
 // GetOrderByID retrieves an order by ID
 func GetOrderByID(orderID int) (*Order, error) {
 	if db == nil {

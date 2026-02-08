@@ -30,6 +30,7 @@
               <option value="">Todos</option>
               <option value="pending">Pendente</option>
               <option value="processing">Processando</option>
+              <option value="shipped">Enviado</option>
               <option value="completed">Concluído</option>
               <option value="cancelled">Cancelado</option>
             </select>
@@ -79,6 +80,23 @@
 
         <div id="order-modal-body" hx-on::after-swap="window.openOrderModal()">
           <!-- Order detail will be loaded here -->
+        </div>
+      </div>
+    </div>
+
+    <div id="status-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+      <div class="bg-white rounded-lg shadow-2xl max-w-md w-full mx-4 p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-bold text-gray-800">Atualizar Status</h3>
+          <button onclick="closeStatusModal()" class="text-gray-500 hover:text-gray-700">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div id="status-modal-body" hx-on::after-swap="window.openStatusModal()">
+          <!-- Status update form will be loaded here -->
         </div>
       </div>
     </div>

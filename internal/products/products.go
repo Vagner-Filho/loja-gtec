@@ -59,14 +59,40 @@ func GetAllProducts() ([]Product, error) {
 
 // GetProductsByCategory retrieves products by category from the database
 func GetProductsByCategory(category string) ([]Product, error) {
+	return GetProductsByCategoryAndBrands(category, nil)
+}
+
+// GetProductsByCategoryAndBrands retrieves products by category and brand filters from the database
+func GetProductsByCategoryAndBrands(category string, brandIDs []int) ([]Product, error) {
 	var rows *sql.Rows
 	var err error
 
-	if category == "" {
+	if category == "" && len(brandIDs) == 0 {
 		return GetAllProducts()
 	}
 
-	rows, err = db.Query("SELECT items.id, items.name, items.price, items.image, products.category, items.is_available FROM products JOIN items ON products.item_id = items.id WHERE products.category = $1 ORDER BY items.id DESC", category)
+	query := "SELECT DISTINCT items.id, items.name, items.price, items.image, products.category, items.is_available FROM products JOIN items ON products.item_id = items.id"
+	var args []interface{}
+	var conditions []string
+
+	if len(brandIDs) > 0 {
+		query += " JOIN product_brands ON products.id = product_brands.product_id"
+		conditions = append(conditions, "product_brands.brand_id = ANY($"+string(rune('0'+len(args)+1))+")")
+		args = append(args, pq.Array(brandIDs))
+	}
+
+	if category != "" {
+		conditions = append(conditions, "products.category = $"+string(rune('0'+len(args)+1)))
+		args = append(args, category)
+	}
+
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	query += " ORDER BY items.id DESC"
+
+	rows, err = db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}

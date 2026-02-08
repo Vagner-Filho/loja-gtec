@@ -1,0 +1,38 @@
+<div id="order-{{ .Order.ID }}" class="border border-gray-200 rounded-lg p-4 shadow-sm">
+  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    <div>
+      <div class="text-sm text-gray-500">Pedido {{ .Order.OrderNumber }}</div>
+      <div class="text-lg font-semibold text-gray-800">{{ .Order.FirstName }} {{ .Order.LastName }}</div>
+      <div class="text-sm text-gray-600">{{ .Order.Email }} • {{ .Order.Phone }}</div>
+      <div class="text-sm text-gray-600">{{ .Order.CreatedAt.Format "02/01/2006 15:04" }}</div>
+    </div>
+    <div class="flex flex-wrap gap-3">
+      <span class="status-badge status-{{ .Order.Status }}">{{ translateStatus .Order.Status }}</span>
+      <span class="px-3 py-1 text-sm rounded-full bg-green-100 text-green-700">{{ translatePaymentStatus .Order.PaymentStatus }}</span>
+      <span class="px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-700">{{ translatePaymentMethod .Order.PaymentMethod }}</span>
+      {{- if .CanViewFinancialData }}
+      <span class="px-3 py-1 text-sm rounded-full bg-yellow-100 text-yellow-700">R$ {{ printf "%.2f" .Order.TotalAmount }}</span>
+      {{- end }}
+    </div>
+    <div class="flex gap-2">
+      <button
+        class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+        hx-get="/api/admin/orders/{{ .Order.ID }}/status-modal"
+        hx-target="#status-modal-body"
+        hx-trigger="click"
+        hx-on::after-swap="window.openStatusModal()"
+      >
+        Atualizar Status
+      </button>
+      <button
+        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+        hx-get="/api/admin/orders/{{ .Order.ID }}"
+        hx-target="#order-modal-body"
+        hx-trigger="click"
+        hx-on::after-swap="window.openOrderModal()"
+      >
+        Ver Detalhes
+      </button>
+    </div>
+  </div>
+</div>

@@ -8,9 +8,9 @@
         <div><span class="font-semibold">Telefone:</span> {{ .Order.Phone }}</div>
       </div>
       <div>
-        <div><span class="font-semibold">Status:</span> {{ .Order.Status }}</div>
-        <div><span class="font-semibold">Pagamento:</span> {{ .Order.PaymentStatus }}</div>
-        <div><span class="font-semibold">Método:</span> {{ .Order.PaymentMethod }}</div>
+        <div><span class="font-semibold">Status:</span> <span class="status-badge status-{{ .Order.Status }}">{{ translateStatus .Order.Status }}</span></div>
+        <div><span class="font-semibold">Pagamento:</span> {{ translatePaymentStatus .Order.PaymentStatus }}</div>
+        <div><span class="font-semibold">Método:</span> {{ translatePaymentMethod .Order.PaymentMethod }}</div>
       </div>
     </div>
   </div>
@@ -32,7 +32,7 @@
       {{- range .Items }}
         <div class="flex justify-between text-sm text-gray-700">
           <div>
-            <div class="font-semibold">{{ .ProductName }}</div>
+            <div class="font-semibold">{{ .ItemName }}</div>
             <div>Qtd: {{ .Quantity }}</div>
           </div>
           {{- if $.CanViewFinancialData }}

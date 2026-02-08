@@ -30,7 +30,7 @@
   {{- end }}
 
   {{- range .Orders }}
-    <div class="border border-gray-200 rounded-lg p-4 shadow-sm">
+    <div id="order-{{ .ID }}" class="border border-gray-200 rounded-lg p-4 shadow-sm">
       <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <div class="text-sm text-gray-500">Pedido {{ .OrderNumber }}</div>
@@ -39,20 +39,27 @@
           <div class="text-sm text-gray-600">{{ .CreatedAt.Format "02/01/2006 15:04" }}</div>
         </div>
         <div class="flex flex-wrap gap-3">
-          <span class="px-3 py-1 text-sm rounded-full bg-blue-100 text-blue-700">{{ .Status }}</span>
-          <span class="px-3 py-1 text-sm rounded-full bg-green-100 text-green-700">{{ .PaymentStatus }}</span>
-          <span class="px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-700">{{ .PaymentMethod }}</span>
+          <span class="status-badge status-{{ .Status }}">{{ translateStatus .Status }}</span>
+          <span class="px-3 py-1 text-sm rounded-full bg-green-100 text-green-700">{{ translatePaymentStatus .PaymentStatus }}</span>
+          <span class="px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-700">{{ translatePaymentMethod .PaymentMethod }}</span>
           {{- if $.CanViewFinancialData }}
           <span class="px-3 py-1 text-sm rounded-full bg-yellow-100 text-yellow-700">R$ {{ printf "%.2f" .TotalAmount }}</span>
           {{- end }}
         </div>
-        <div>
+        <div class="flex gap-2">
+          <button
+            class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+            hx-get="/api/admin/orders/{{ .ID }}/status-modal"
+            hx-target="#status-modal-body"
+            hx-trigger="click"
+          >
+            Atualizar Status
+          </button>
           <button
             class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
             hx-get="/api/admin/orders/{{ .ID }}"
             hx-target="#order-modal-body"
             hx-trigger="click"
-            hx-on::after-swap="window.openOrderModal()"
           >
             Ver Detalhes
           </button>
