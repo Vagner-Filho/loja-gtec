@@ -53,24 +53,24 @@ func RunSchema(db *sql.DB) error {
 		return err
 	}
 
-	schema, err := os.ReadFile("scripts/schema/schema.sql")
-
-	if err != nil {
-		return fmt.Errorf("failed to read schema file: %w", err)
-	}
-
-	_, err = db.Exec(string(schema))
-
-	if err != nil {
-		return fmt.Errorf("failed to execute schema: %w", err)
-	}
-
 	var adminCount uint8
-	err = db.QueryRow("SELECT COUNT(*) FROM admin_users").Scan(&adminCount)
+	err := db.QueryRow("SELECT COUNT(*) FROM admin_users").Scan(&adminCount)
 	if err != nil {
-		return fmt.Errorf("failed to create admin: %w", err)
+		return fmt.Errorf("failed to count admin: %w", err)
 	}
+
 	if adminCount == 0 && config.Environment == "development" {
+		schema, err := os.ReadFile("scripts/schema/schema.sql")
+
+		if err != nil {
+			return fmt.Errorf("failed to read schema file: %w", err)
+		}
+
+		_, err = db.Exec(string(schema))
+
+		if err != nil {
+			return fmt.Errorf("failed to execute schema: %w", err)
+		}
 		admin.CreateAdmin("admin", "123")
 		admin.CreateAdminWithRole("p_admin", "123", "product_admin")
 		seed, err := os.ReadFile("scripts/schema/seed.sql")

@@ -1,5 +1,5 @@
 {{if .}}
-<div id="banner-carousel" class="relative w-full h-48 md:h-64 lg:h-80 overflow-hidden group">
+<div id="banner-carousel" class="relative w-full h-60 md:h-72 lg:h-[420px] overflow-hidden group">
   <!-- Slides -->
   {{range $index, $banner := .}}
   <div class="carousel-slide absolute inset-0 transition-opacity duration-500 ease-in-out {{if eq $index 0}}opacity-100 z-10{{else}}opacity-0 z-0{{end}}" data-slide="{{$index}}">
