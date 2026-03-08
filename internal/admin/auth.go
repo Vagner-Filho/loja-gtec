@@ -138,7 +138,7 @@ func DeleteSession(token string) {
 func Login(w http.ResponseWriter, username, password string) error {
 	admin, err := GetAdminByUsername(username)
 	if err != nil {
-		return fmt.Errorf("invalid credentials")
+		return fmt.Errorf("Credenciais Inválidas")
 	}
 
 	if !CheckPassword(password, admin.PasswordHash) {

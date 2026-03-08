@@ -1,0 +1,172 @@
+{{if .}}
+<div id="banner-carousel" class="relative w-full h-48 md:h-64 lg:h-80 overflow-hidden group">
+  <!-- Slides -->
+  {{range $index, $banner := .}}
+  <div class="carousel-slide absolute inset-0 transition-opacity duration-500 ease-in-out {{if eq $index 0}}opacity-100 z-10{{else}}opacity-0 z-0{{end}}" data-slide="{{$index}}">
+    {{if $banner.LinkURL}}
+    <a href="{{$banner.LinkURL}}" class="block w-full h-full" aria-label="{{$banner.Title}}">
+      <img src="{{$banner.ImagePath}}" alt="{{$banner.Title}}" class="w-full h-full object-cover">
+    </a>
+    {{else}}
+    <img src="{{$banner.ImagePath}}" alt="{{$banner.Title}}" class="w-full h-full object-cover">
+    {{end}}
+    <!-- Title overlay -->
+    <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 z-20">
+      <h3 class="text-white text-lg md:text-xl font-semibold drop-shadow-lg">{{$banner.Title}}</h3>
+    </div>
+  </div>
+  {{end}}
+
+  {{if gt (len .) 1}}
+  <!-- Navigation Arrows -->
+  <button type="button" class="carousel-prev absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 p-3 rounded-full shadow-lg transition-all z-30 focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Banner anterior">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+    </svg>
+  </button>
+  <button type="button" class="carousel-next absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 p-3 rounded-full shadow-lg transition-all z-30 focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Próximo banner">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+    </svg>
+  </button>
+
+  <!-- Navigation Dots -->
+  <div class="carousel-dots absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-3 z-30">
+    {{range $index, $banner := .}}
+    <button type="button" class="carousel-dot w-3 h-3 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white {{if eq $index 0}}bg-white scale-110{{else}}bg-white/60 hover:bg-white/80{{end}}" data-slide="{{$index}}" aria-label="Ir para {{$banner.Title}}"></button>
+    {{end}}
+  </div>
+  {{end}}
+</div>
+
+<script>
+  (function() {
+    const carousel = document.getElementById('banner-carousel');
+    if (!carousel) return;
+    
+    const slides = carousel.querySelectorAll('.carousel-slide');
+    const prevBtn = carousel.querySelector('.carousel-prev');
+    const nextBtn = carousel.querySelector('.carousel-next');
+    const dots = carousel.querySelectorAll('.carousel-dot');
+    
+    if (slides.length <= 1) return;
+    
+    let currentSlide = 0;
+    let autoplayInterval;
+    let isTransitioning = false;
+    
+    function goToSlide(index) {
+      if (isTransitioning) return;
+      isTransitioning = true;
+      
+      if (index < 0) index = slides.length - 1;
+      if (index >= slides.length) index = 0;
+      
+      // Hide current slide
+      slides[currentSlide].classList.remove('opacity-100', 'z-10');
+      slides[currentSlide].classList.add('opacity-0', 'z-0');
+      
+      // Show new slide
+      slides[index].classList.remove('opacity-0', 'z-0');
+      slides[index].classList.add('opacity-100', 'z-10');
+      
+      currentSlide = index;
+      
+      // Update dots
+      dots.forEach((dot, i) => {
+        if (i === currentSlide) {
+          dot.classList.remove('bg-white/60', 'hover:bg-white/80');
+          dot.classList.add('bg-white', 'scale-110');
+        } else {
+          dot.classList.remove('bg-white', 'scale-110');
+          dot.classList.add('bg-white/60', 'hover:bg-white/80');
+        }
+      });
+      
+      setTimeout(() => {
+        isTransitioning = false;
+      }, 500);
+    }
+    
+    function nextSlide() {
+      goToSlide(currentSlide + 1);
+    }
+    
+    function prevSlide() {
+      goToSlide(currentSlide - 1);
+    }
+    
+    function startAutoplay() {
+      autoplayInterval = setInterval(nextSlide, 5000);
+    }
+    
+    function stopAutoplay() {
+      clearInterval(autoplayInterval);
+    }
+    
+    // Event listeners
+    if (prevBtn) {
+      prevBtn.addEventListener('click', () => { 
+        stopAutoplay(); 
+        prevSlide(); 
+        startAutoplay(); 
+      });
+    }
+    
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => { 
+        stopAutoplay(); 
+        nextSlide(); 
+        startAutoplay(); 
+      });
+    }
+    
+    dots.forEach((dot, index) => {
+      dot.addEventListener('click', () => { 
+        if (index !== currentSlide) {
+          stopAutoplay(); 
+          goToSlide(index); 
+          startAutoplay(); 
+        }
+      });
+    });
+    
+    // Pause on hover
+    carousel.addEventListener('mouseenter', stopAutoplay);
+    carousel.addEventListener('mouseleave', startAutoplay);
+    
+    // Touch support for mobile swipe
+    let touchStartX = 0;
+    let touchEndX = 0;
+    
+    carousel.addEventListener('touchstart', (e) => {
+      touchStartX = e.changedTouches[0].screenX;
+      stopAutoplay();
+    }, {passive: true});
+    
+    carousel.addEventListener('touchend', (e) => {
+      touchEndX = e.changedTouches[0].screenX;
+      handleSwipe();
+      startAutoplay();
+    }, {passive: true});
+    
+    function handleSwipe() {
+      const swipeThreshold = 50;
+      const diff = touchStartX - touchEndX;
+      
+      if (Math.abs(diff) > swipeThreshold) {
+        if (diff > 0) {
+          nextSlide();
+        } else {
+          prevSlide();
+        }
+      }
+    }
+    
+    // Start autoplay
+    startAutoplay();
+  })();
+</script>
+{{else}}
+<!-- No active banners -->
+{{end}}

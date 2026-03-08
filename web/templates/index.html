@@ -34,6 +34,15 @@
         </nav>
       </div>
     </header>
+    
+    <!-- Banner Carousel -->
+    <div id="banners-container" 
+         hx-get="/api/banners" 
+         hx-trigger="load"
+         hx-swap="innerHTML"
+         class="w-full">
+    </div>
+    
     <div class="flex justify-center items-center mx-auto gap-2 text-xl py-4" id="product-type-selection">
       <button type="button" 
         id="btn-todos"

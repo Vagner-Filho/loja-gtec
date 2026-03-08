@@ -6,11 +6,22 @@ DROP TABLE IF EXISTS services;
 DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS admin_users;
 DROP TABLE IF EXISTS items;
+DROP TABLE IF EXISTS banners;
 DROP TABLE IF EXISTS brands;
 
 CREATE TABLE brands (
     id SERIAL PRIMARY KEY,
     name TEXT UNIQUE NOT NULL
+);
+
+CREATE TABLE banners (
+    id SERIAL PRIMARY KEY,
+    image_path TEXT NOT NULL,
+    title TEXT NOT NULL,
+    link_url TEXT,
+    display_order INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE items (

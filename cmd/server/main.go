@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"lojagtec/internal/admin"
+	"lojagtec/internal/banners"
 	"lojagtec/internal/checkout"
 	"lojagtec/internal/database"
 	"lojagtec/internal/orders"
@@ -145,15 +146,16 @@ func main() {
 	}
 	defer db.Close()
 
-	// Apply database schema
-	if err := database.RunSchema(db); err != nil {
-		log.Fatalf("Could not apply database schema: %v", err)
-	}
-
 	// Set database for packages
 	products.SetDatabase(db)
 	admin.SetDatabase(db)
 	orders.SetDatabase(db)
+	banners.SetDatabase(db)
+
+	// Apply database schema
+	if err := database.RunSchema(db); err != nil {
+		log.Fatalf("Could not apply database schema: %v", err)
+	}
 
 	// Ensure upload directory exists
 	if err := os.MkdirAll(uploadPath, 0755); err != nil {
@@ -582,6 +584,15 @@ func main() {
 		tmpl.Execute(w, nil)
 	}))
 
+	http.HandleFunc("/admin/banners", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
+		tmpl, err := template.ParseFiles("web/templates/admin-banners.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		tmpl.Execute(w, nil)
+	}))
+
 	// Admin API routes
 	http.HandleFunc("/api/admin/orders", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -687,6 +698,216 @@ func main() {
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(brand)
 	}))
+
+	// Banner management routes
+	http.HandleFunc("/api/admin/banners", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			// Return HTML list for HTMX requests
+			if r.Header.Get("HX-Request") == "true" {
+				tmpl, err := template.ParseFiles("web/templates/admin-banner-list.html")
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				bannerList, err := banners.GetAllBanners()
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				w.Header().Set("Content-Type", "text/html")
+				tmpl.Execute(w, bannerList)
+			} else {
+				// Return JSON for non-HTMX requests
+				w.Header().Set("Content-Type", "application/json")
+				bannerList, err := banners.GetAllBanners()
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				json.NewEncoder(w).Encode(bannerList)
+			}
+
+		case http.MethodPost:
+			// Parse multipart form (max 5MB)
+			if err := r.ParseMultipartForm(maxUploadSize); err != nil {
+				http.Error(w, "File too large or invalid form data", http.StatusBadRequest)
+				return
+			}
+
+			// Get form values
+			title := r.FormValue("title")
+			linkURL := r.FormValue("link_url")
+
+			// Validate title is required
+			if title == "" {
+				http.Error(w, "Title is required", http.StatusBadRequest)
+				return
+			}
+
+			// Handle file upload
+			imagePath, err := handleImageUpload(r, "image")
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Image upload failed: %v", err), http.StatusBadRequest)
+				return
+			}
+
+			// Create banner
+			banner, err := banners.CreateBanner(imagePath, title, linkURL)
+			if err != nil {
+				// Clean up uploaded file on failure
+				os.Remove(filepath.Join(uploadPath, filepath.Base(imagePath)))
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			if r.Header.Get("HX-Request") == "true" {
+				w.Header().Set("HX-Trigger", "refreshBanners")
+				w.WriteHeader(http.StatusCreated)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusCreated)
+			json.NewEncoder(w).Encode(banner)
+
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))
+
+	// Delete banner route
+	http.HandleFunc("/api/admin/banners/", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/api/admin/banners/")
+
+		// Handle toggle status: /api/admin/banners/{id}/toggle
+		if strings.HasSuffix(path, "/toggle") {
+			if r.Method != http.MethodPut {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+
+			idStr := strings.TrimSuffix(path, "/toggle")
+			id, err := strconv.Atoi(idStr)
+			if err != nil {
+				http.Error(w, "Invalid banner ID", http.StatusBadRequest)
+				return
+			}
+
+			isActive, err := banners.ToggleBannerStatus(id)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			if r.Header.Get("HX-Request") == "true" {
+				w.Header().Set("HX-Trigger", "refreshBanners")
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]bool{"is_active": isActive})
+			return
+		}
+
+		// Handle reorder: /api/admin/banners/{id}/reorder
+		if strings.HasSuffix(path, "/reorder") {
+			if r.Method != http.MethodPost {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+
+			idStr := strings.TrimSuffix(path, "/reorder")
+			id, err := strconv.Atoi(idStr)
+			if err != nil {
+				http.Error(w, "Invalid banner ID", http.StatusBadRequest)
+				return
+			}
+
+			if err := r.ParseForm(); err != nil {
+				http.Error(w, "Invalid form data", http.StatusBadRequest)
+				return
+			}
+
+			newOrder, err := strconv.Atoi(r.FormValue("order"))
+			if err != nil {
+				http.Error(w, "Invalid order value", http.StatusBadRequest)
+				return
+			}
+
+			if err := banners.UpdateBannerOrder(id, newOrder); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			if r.Header.Get("HX-Request") == "true" {
+				w.Header().Set("HX-Trigger", "refreshBanners")
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		// Handle delete: /api/admin/banners/{id}
+		if r.Method != http.MethodDelete {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		id, err := strconv.Atoi(path)
+		if err != nil {
+			http.Error(w, "Invalid banner ID", http.StatusBadRequest)
+			return
+		}
+
+		// Get banner to delete its image file
+		banner, err := banners.GetBannerByID(id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		// Delete from database
+		if err := banners.DeleteBanner(id); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Delete image file
+		os.Remove(filepath.Join(uploadPath, filepath.Base(banner.ImagePath)))
+
+		if r.Header.Get("HX-Request") == "true" {
+			w.Header().Set("HX-Trigger", "refreshBanners")
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// Public banner endpoint - returns carousel HTML
+	http.HandleFunc("/api/banners", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		tmpl, err := template.ParseFiles("web/templates/carousel.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		bannerList, err := banners.GetActiveBanners()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html")
+		tmpl.Execute(w, bannerList)
+	})
 
 	http.HandleFunc("/api/admin/orders/", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
