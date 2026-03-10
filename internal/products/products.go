@@ -4,20 +4,25 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/lib/pq"
 )
 
 type Product struct {
-	ID             int     `json:"id"`
-	ProductID      int     `json:"productId"`
-	Name           string  `json:"name"`
-	Price          float64 `json:"price"`
-	Image          string  `json:"image"`
-	Category       string  `json:"category"`
-	IsAvailable    bool    `json:"isAvailable"`
-	BrandIDs       []int   `json:"brandIds,omitempty"`
-	FitsProductIDs []int   `json:"fitsProductIds,omitempty"`
+	ID             int        `json:"id"`
+	ProductID      int        `json:"productId"`
+	Name           string     `json:"name"`
+	Price          float64    `json:"price"`
+	Image          string     `json:"image"`
+	Category       string     `json:"category"`
+	IsAvailable    bool       `json:"isAvailable"`
+	IsOnOffer      bool       `json:"isOnOffer"`
+	OfferPrice     float64    `json:"offerPrice,omitempty"`
+	OfferStartDate *time.Time `json:"offerStartDate,omitempty"`
+	OfferEndDate   *time.Time `json:"offerEndDate,omitempty"`
+	BrandIDs       []int      `json:"brandIds,omitempty"`
+	FitsProductIDs []int      `json:"fitsProductIds,omitempty"`
 }
 
 type Brand struct {
@@ -37,9 +42,62 @@ func SetDatabase(database *sql.DB) {
 	db = database
 }
 
+// scanProduct scans a product row with optional offer data
+func scanProduct(rows *sql.Rows) (Product, error) {
+	var p Product
+	var offerID sql.NullInt64
+	var offerPrice sql.NullFloat64
+	var startDate, endDate sql.NullTime
+	var isActive sql.NullBool
+
+	err := rows.Scan(&p.ID, &p.ProductID, &p.Name, &p.Price, &p.Image, &p.Category, &p.IsAvailable,
+		&offerID, &offerPrice, &startDate, &endDate, &isActive)
+	if err != nil {
+		return p, err
+	}
+
+	// Check if product has an active offer
+	if offerID.Valid && isActive.Valid && isActive.Bool {
+		now := time.Now()
+		offerStart := startDate.Time
+		offerEnd := endDate.Time
+
+		// Check if offer is currently active based on dates
+		isCurrentlyActive := true
+		if startDate.Valid && now.Before(offerStart) {
+			isCurrentlyActive = false
+		}
+		if endDate.Valid && now.After(offerEnd) {
+			isCurrentlyActive = false
+		}
+
+		if isCurrentlyActive {
+			p.IsOnOffer = true
+			if offerPrice.Valid {
+				p.OfferPrice = offerPrice.Float64
+			}
+			if startDate.Valid {
+				p.OfferStartDate = &offerStart
+			}
+			if endDate.Valid {
+				p.OfferEndDate = &offerEnd
+			}
+		}
+	}
+
+	return p, nil
+}
+
 // GetAllProducts retrieves all products from the database
 func GetAllProducts() ([]Product, error) {
-	rows, err := db.Query("SELECT items.id, items.name, items.price, items.image, products.category, items.is_available FROM products JOIN items ON products.item_id = items.id ORDER BY items.id DESC")
+	query := `SELECT items.id, products.id, items.name, items.price, items.image, products.category, 
+		items.is_available, o.id, o.offer_price, o.start_date, o.end_date, o.is_active
+		FROM products 
+		JOIN items ON products.item_id = items.id 
+		LEFT JOIN offers o ON products.id = o.product_id AND o.is_active = TRUE
+		ORDER BY items.id DESC`
+
+	rows, err := db.Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -47,8 +105,8 @@ func GetAllProducts() ([]Product, error) {
 
 	var products []Product
 	for rows.Next() {
-		var p Product
-		if err := rows.Scan(&p.ID, &p.Name, &p.Price, &p.Image, &p.Category, &p.IsAvailable); err != nil {
+		p, err := scanProduct(rows)
+		if err != nil {
 			return nil, err
 		}
 		products = append(products, p)
@@ -71,7 +129,11 @@ func GetProductsByCategoryAndBrands(category string, brandIDs []int) ([]Product,
 		return GetAllProducts()
 	}
 
-	query := "SELECT DISTINCT items.id, items.name, items.price, items.image, products.category, items.is_available FROM products JOIN items ON products.item_id = items.id"
+	query := `SELECT DISTINCT items.id, products.id, items.name, items.price, items.image, products.category, 
+		items.is_available, o.id, o.offer_price, o.start_date, o.end_date, o.is_active
+		FROM products 
+		JOIN items ON products.item_id = items.id
+		LEFT JOIN offers o ON products.id = o.product_id AND o.is_active = TRUE`
 	var args []interface{}
 	var conditions []string
 
@@ -100,8 +162,8 @@ func GetProductsByCategoryAndBrands(category string, brandIDs []int) ([]Product,
 
 	var products []Product
 	for rows.Next() {
-		var p Product
-		if err := rows.Scan(&p.ID, &p.Name, &p.Price, &p.Image, &p.Category, &p.IsAvailable); err != nil {
+		p, err := scanProduct(rows)
+		if err != nil {
 			return nil, err
 		}
 		products = append(products, p)
@@ -114,10 +176,55 @@ func GetProductsByCategoryAndBrands(category string, brandIDs []int) ([]Product,
 func GetProductByID(id int) (*Product, error) {
 	var p Product
 	var productID int
-	err := db.QueryRow("SELECT products.id, items.id, items.name, items.price, items.image, products.category, items.is_available FROM products JOIN items ON products.item_id = items.id WHERE items.id = $1", id).
-		Scan(&productID, &p.ID, &p.Name, &p.Price, &p.Image, &p.Category, &p.IsAvailable)
+	var offerID sql.NullInt64
+	var offerPrice sql.NullFloat64
+	var startDate, endDate sql.NullTime
+	var isActive sql.NullBool
+
+	query := `SELECT items.id, products.id, items.name, items.price, items.image, 
+		products.category, items.is_available, o.id, o.offer_price, 
+		o.start_date, o.end_date, o.is_active
+		FROM products 
+		JOIN items ON products.item_id = items.id 
+		LEFT JOIN offers o ON products.id = o.product_id AND o.is_active = TRUE
+		WHERE items.id = $1`
+
+	err := db.QueryRow(query, id).Scan(
+		&p.ID, &productID, &p.Name, &p.Price, &p.Image, &p.Category, &p.IsAvailable,
+		&offerID, &offerPrice, &startDate, &endDate, &isActive,
+	)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check if product has an active offer
+	if offerID.Valid && isActive.Valid && isActive.Bool {
+		now := time.Now()
+		offerStart := startDate.Time
+		offerEnd := endDate.Time
+
+		// Check if offer is currently active based on dates
+		isCurrentlyActive := true
+		if startDate.Valid && now.Before(offerStart) {
+			isCurrentlyActive = false
+		}
+		if endDate.Valid && now.After(offerEnd) {
+			isCurrentlyActive = false
+		}
+
+		if isCurrentlyActive {
+			p.IsOnOffer = true
+			p.ProductID = productID
+			if offerPrice.Valid {
+				p.OfferPrice = offerPrice.Float64
+			}
+			if startDate.Valid {
+				p.OfferStartDate = &offerStart
+			}
+			if endDate.Valid {
+				p.OfferEndDate = &offerEnd
+			}
+		}
 	}
 
 	p.ProductID = productID
@@ -133,6 +240,14 @@ func GetProductByID(id int) (*Product, error) {
 	p.BrandIDs = brandIDs
 	p.FitsProductIDs = fitIDs
 	return &p, nil
+}
+
+// GetCurrentPrice returns the effective price (offer price if active, otherwise regular price)
+func GetCurrentPrice(product Product) float64 {
+	if product.IsOnOffer && product.OfferPrice > 0 {
+		return product.OfferPrice
+	}
+	return product.Price
 }
 
 // CreateProduct creates a new product in the database

@@ -48,6 +48,21 @@ CREATE TABLE products (
     item_id INTEGER REFERENCES items ON DELETE CASCADE
 );
 
+CREATE TABLE offers (
+    id SERIAL PRIMARY KEY,
+    product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    offer_price DECIMAL(10, 2) NOT NULL,
+    start_date TIMESTAMP,
+    end_date TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(product_id)
+);
+
+CREATE INDEX idx_offers_active ON offers(is_active) WHERE is_active = TRUE;
+CREATE INDEX idx_offers_dates ON offers(start_date, end_date);
+
 CREATE TABLE services (
     id SERIAL PRIMARY KEY,
     description TEXT NOT NULL,

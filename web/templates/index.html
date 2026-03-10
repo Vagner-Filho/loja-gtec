@@ -57,6 +57,18 @@
       </button>
       <div class="w-0.5 h-6 bg-black"></div>
       <button type="button" 
+        id="btn-ofertas"
+        data-category="ofertas"
+        hx-get="/products/ofertas" 
+        hx-target="#products-container" 
+        hx-swap="innerHTML" 
+        hx-indicator="#loading"
+        hx-on:click="document.querySelectorAll('.product-filter-btn').forEach(btn => btn.classList.remove('bg-blue-600', 'text-white')); this.classList.add('bg-blue-600', 'text-white')"
+        class="px-4 py-2 rounded hover:bg-red-100 transition-colors duration-200 product-filter-btn text-red-600 font-semibold">
+        Ofertas
+      </button>
+      <div class="w-0.5 h-6 bg-black"></div>
+      <button type="button" 
         id="btn-bebedouros"
         data-category="bebedouros"
         hx-get="/products/bebedouros" 
@@ -169,6 +181,10 @@
         const todosBtn = document.getElementById('btn-todos');
         todosBtn.setAttribute('hx-get', '/products/all' + brandParam);
         
+        // Update Ofertas button
+        const ofertasBtn = document.getElementById('btn-ofertas');
+        ofertasBtn.setAttribute('hx-get', '/products/ofertas' + brandParam);
+        
         // Update Bebedouros button
         const bebedourosBtn = document.getElementById('btn-bebedouros');
         bebedourosBtn.setAttribute('hx-get', '/products/bebedouros' + brandParam);
@@ -187,6 +203,7 @@
         
         // Re-initialize HTMX on these buttons
         htmx.process(todosBtn);
+        htmx.process(ofertasBtn);
         htmx.process(bebedourosBtn);
         htmx.process(purificadoresBtn);
         htmx.process(refisBtn);

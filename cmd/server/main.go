@@ -20,6 +20,7 @@ import (
 	"lojagtec/internal/banners"
 	"lojagtec/internal/checkout"
 	"lojagtec/internal/database"
+	"lojagtec/internal/offers"
 	"lojagtec/internal/orders"
 	"lojagtec/internal/products"
 )
@@ -151,6 +152,7 @@ func main() {
 	admin.SetDatabase(db)
 	orders.SetDatabase(db)
 	banners.SetDatabase(db)
+	offers.SetDatabase(db)
 
 	// Apply database schema
 	if err := database.RunSchema(db); err != nil {
@@ -479,6 +481,44 @@ func main() {
 		tmpl.Execute(w, prods)
 	})
 
+	// Offers route - displays products currently on offer
+	http.HandleFunc("/products/ofertas", func(w http.ResponseWriter, r *http.Request) {
+		offerProducts, err := offers.GetActiveOffers()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Convert offers to products format for template
+		prods := make([]products.Product, len(offerProducts))
+		for i, offer := range offerProducts {
+			prods[i] = products.Product{
+				ID:             offer.ID,
+				ProductID:      offer.ProductID,
+				Name:           offer.Name,
+				Price:          offer.Price,
+				Image:          offer.Image,
+				Category:       offer.Category,
+				IsOnOffer:      true, // Active offers are already filtered by GetActiveOffers
+				OfferPrice:     offer.OfferPrice,
+				OfferStartDate: offer.StartDate,
+				OfferEndDate:   offer.EndDate,
+			}
+		}
+
+		templateFile := "web/templates/product-cards.html"
+		if len(prods) == 0 {
+			templateFile = "web/templates/product-empty-state.html"
+		}
+
+		tmpl, err := template.ParseFiles(templateFile)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		tmpl.Execute(w, prods)
+	})
+
 	// Brands endpoint for filter UI
 	http.HandleFunc("/api/brands", func(w http.ResponseWriter, r *http.Request) {
 		brands, err := products.GetAllBrands()
@@ -586,6 +626,15 @@ func main() {
 
 	http.HandleFunc("/admin/banners", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
 		tmpl, err := template.ParseFiles("web/templates/admin-banners.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		tmpl.Execute(w, nil)
+	}))
+
+	http.HandleFunc("/admin/offers", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
+		tmpl, err := template.ParseFiles("web/templates/admin-offers.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -908,6 +957,209 @@ func main() {
 		w.Header().Set("Content-Type", "text/html")
 		tmpl.Execute(w, bannerList)
 	})
+
+	// Admin offers management routes
+	http.HandleFunc("/api/admin/offers", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			// Return HTML list for HTMX requests
+			if r.Header.Get("HX-Request") == "true" {
+				tmpl, err := template.ParseFiles("web/templates/admin-offers-list.html")
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				offerList, err := offers.GetAllOffers()
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				w.Header().Set("Content-Type", "text/html")
+				tmpl.Execute(w, offerList)
+			} else {
+				// Return JSON for non-HTMX requests
+				w.Header().Set("Content-Type", "application/json")
+				offerList, err := offers.GetAllOffers()
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				json.NewEncoder(w).Encode(offerList)
+			}
+
+		case http.MethodPost:
+			if err := r.ParseForm(); err != nil {
+				http.Error(w, "Invalid form data", http.StatusBadRequest)
+				return
+			}
+
+			productID, err := strconv.Atoi(r.FormValue("product_id"))
+			if err != nil {
+				http.Error(w, "Invalid product ID", http.StatusBadRequest)
+				return
+			}
+
+			offerPrice, err := strconv.ParseFloat(r.FormValue("offer_price"), 64)
+			if err != nil {
+				http.Error(w, "Invalid offer price", http.StatusBadRequest)
+				return
+			}
+
+			form := offers.OfferForm{
+				ProductID:  productID,
+				OfferPrice: offerPrice,
+			}
+
+			// Parse optional dates
+			startDateStr := r.FormValue("offer_start_date")
+			if startDateStr != "" {
+				startDate, err := time.Parse("2006-01-02T15:04", startDateStr)
+				if err == nil {
+					form.StartDate = &startDate
+				}
+			}
+
+			endDateStr := r.FormValue("offer_end_date")
+			if endDateStr != "" {
+				endDate, err := time.Parse("2006-01-02T15:04", endDateStr)
+				if err == nil {
+					form.EndDate = &endDate
+				}
+			}
+
+			if err := offers.CreateOffer(form); err != nil {
+				if r.Header.Get("HX-Request") == "true" {
+					tmpl, _ := template.ParseFiles("web/templates/admin-error-message.html")
+					tmpl.Execute(w, err.Error())
+				} else {
+					http.Error(w, err.Error(), http.StatusBadRequest)
+				}
+				return
+			}
+
+			if r.Header.Get("HX-Request") == "true" {
+				w.Header().Set("HX-Trigger", "refreshOffers")
+				w.WriteHeader(http.StatusCreated)
+				return
+			}
+			w.WriteHeader(http.StatusCreated)
+
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))
+
+	// Admin offers products endpoint - returns available products for selection
+	http.HandleFunc("/api/admin/offers/products", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		products, err := offers.GetProductsForOfferSelection()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html")
+		for _, p := range products {
+			fmt.Fprintf(w, `<option value="%d">%s</option>`, p.ID, p.Name)
+		}
+	}))
+
+	// Admin offer detail/update/delete routes
+	http.HandleFunc("/api/admin/offers/", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/api/admin/offers/")
+
+		switch r.Method {
+		case http.MethodPut:
+			id, err := strconv.Atoi(path)
+			if err != nil {
+				http.Error(w, "Invalid offer ID", http.StatusBadRequest)
+				return
+			}
+
+			if err := r.ParseForm(); err != nil {
+				http.Error(w, "Invalid form data", http.StatusBadRequest)
+				return
+			}
+
+			offerPrice, err := strconv.ParseFloat(r.FormValue("offer_price"), 64)
+			if err != nil {
+				http.Error(w, "Invalid offer price", http.StatusBadRequest)
+				return
+			}
+
+			form := offers.OfferForm{
+				OfferPrice: offerPrice,
+			}
+
+			// Parse optional dates
+			startDateStr := r.FormValue("offer_start_date")
+			if startDateStr != "" {
+				startDate, err := time.Parse("2006-01-02T15:04", startDateStr)
+				if err == nil {
+					form.StartDate = &startDate
+				}
+			}
+
+			endDateStr := r.FormValue("offer_end_date")
+			if endDateStr != "" {
+				endDate, err := time.Parse("2006-01-02T15:04", endDateStr)
+				if err == nil {
+					form.EndDate = &endDate
+				}
+			}
+
+			if err := offers.UpdateOffer(id, form); err != nil {
+				if r.Header.Get("HX-Request") == "true" {
+					tmpl, _ := template.ParseFiles("web/templates/admin-error-message.html")
+					tmpl.Execute(w, err.Error())
+				} else {
+					http.Error(w, err.Error(), http.StatusBadRequest)
+				}
+				return
+			}
+
+			if r.Header.Get("HX-Request") == "true" {
+				w.Header().Set("HX-Trigger", "refreshOffers")
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+
+		case http.MethodDelete:
+			id, err := strconv.Atoi(path)
+			if err != nil {
+				http.Error(w, "Invalid offer ID", http.StatusBadRequest)
+				return
+			}
+
+			_, err = offers.ToggleOfferStatus(id)
+			if err != nil {
+				if r.Header.Get("HX-Request") == "true" {
+					tmpl, _ := template.ParseFiles("web/templates/admin-error-message.html")
+					tmpl.Execute(w, err.Error())
+				} else {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
+				return
+			}
+
+			if r.Header.Get("HX-Request") == "true" {
+				w.Header().Set("HX-Trigger", "refreshOffers")
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))
 
 	http.HandleFunc("/api/admin/orders/", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
