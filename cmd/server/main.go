@@ -478,7 +478,7 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		tmpl.Execute(w, prods)
+		err = tmpl.Execute(w, prods)
 	})
 
 	// Offers route - displays products currently on offer
@@ -503,6 +503,7 @@ func main() {
 				OfferPrice:     offer.OfferPrice,
 				OfferStartDate: offer.StartDate,
 				OfferEndDate:   offer.EndDate,
+				IsAvailable:    true,
 			}
 		}
 
