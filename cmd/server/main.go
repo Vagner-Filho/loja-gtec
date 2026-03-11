@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -47,6 +48,13 @@ type adminEditData struct {
 type brandModalData struct {
 	Name  string
 	Error string
+}
+
+type productPageData struct {
+	Product            *products.Product
+	Brands             []products.Brand
+	CompatibleProducts []products.Product
+	RelatedProducts    []products.Product
 }
 
 // setCacheHeaders sets HTTP cache headers for HTMX modal responses
@@ -126,6 +134,9 @@ func orderFuncMap() template.FuncMap {
 		"translateStatus":        translateStatus,
 		"translatePaymentStatus": translatePaymentStatus,
 		"translatePaymentMethod": translatePaymentMethod,
+		"sub": func(a, b float64) float64 {
+			return a - b
+		},
 	}
 }
 
@@ -537,6 +548,97 @@ func main() {
 				%s
 			</button>`, brand.ID, brand.Name)
 		}
+	})
+
+	// Product detail page
+	http.HandleFunc("/produto/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Extract product ID from URL
+		path := strings.TrimPrefix(r.URL.Path, "/produto/")
+		parts := strings.Split(path, "/")
+		if len(parts) == 0 || parts[0] == "" {
+			http.Error(w, "Invalid product ID", http.StatusBadRequest)
+			return
+		}
+
+		productID, err := strconv.Atoi(parts[0])
+		if err != nil {
+			http.Error(w, "Invalid product ID", http.StatusBadRequest)
+			return
+		}
+
+		// Get product from database
+		product, err := products.GetProductByID(productID)
+		if err != nil {
+			// Check if product not found
+			if errors.Is(err, sql.ErrNoRows) {
+				http.Error(w, "Product not found", http.StatusNotFound)
+				return
+			}
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Rule 1: Block unavailable products
+		if !product.IsAvailable {
+			// Return 404 page
+			tmpl, err := template.ParseFiles("web/templates/404.html")
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+			tmpl.Execute(w, nil)
+			return
+		}
+
+		// Get brand names for this product
+		brandNames, err := products.GetBrandNamesByProductID(product.ProductID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Get compatible products (for refis and pecas)
+		var compatibleProducts []products.Product
+		if product.Category == "refis" || product.Category == "pecas" {
+			compatibleProducts, err = products.GetCompatibleProductsByProductID(product.ProductID)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		}
+
+		// Get related products (same category, excluding current product)
+		relatedProducts, err := products.GetRelatedProducts(product.ProductID, product.Category, 8)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Parse template with custom function map
+		tmpl, err := template.New("product.html").Funcs(template.FuncMap{
+			"sub": func(a, b float64) float64 {
+				return a - b
+			},
+		}).ParseFiles("web/templates/product.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		data := productPageData{
+			Product:            product,
+			Brands:             brandNames,
+			CompatibleProducts: compatibleProducts,
+			RelatedProducts:    relatedProducts,
+		}
+
+		tmpl.Execute(w, data)
 	})
 
 	// Admin routes

@@ -556,3 +556,87 @@ func DeleteProduct(id int) error {
 
 	return nil
 }
+
+// GetBrandNamesByProductID returns brand names for a product
+func GetBrandNamesByProductID(productID int) ([]Brand, error) {
+	query := `SELECT b.id, b.name 
+		FROM brands b 
+		JOIN product_brands pb ON b.id = pb.brand_id 
+		WHERE pb.product_id = $1 
+		ORDER BY b.name`
+
+	rows, err := db.Query(query, productID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var brands []Brand
+	for rows.Next() {
+		var b Brand
+		if err := rows.Scan(&b.ID, &b.Name); err != nil {
+			return nil, err
+		}
+		brands = append(brands, b)
+	}
+
+	return brands, nil
+}
+
+// GetCompatibleProductsByProductID returns products compatible with this part
+func GetCompatibleProductsByProductID(productID int) ([]Product, error) {
+	query := `SELECT items.id, products.id, items.name, items.price, items.image, products.category, 
+		items.is_available, o.id, o.offer_price, o.start_date, o.end_date, o.is_active
+		FROM product_compatibility pc
+		JOIN products ON pc.fits_product_id = products.id
+		JOIN items ON products.item_id = items.id
+		LEFT JOIN offers o ON products.id = o.product_id AND o.is_active = TRUE
+		WHERE pc.part_product_id = $1
+		ORDER BY items.name`
+
+	rows, err := db.Query(query, productID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var products []Product
+	for rows.Next() {
+		p, err := scanProduct(rows)
+		if err != nil {
+			return nil, err
+		}
+		products = append(products, p)
+	}
+
+	return products, nil
+}
+
+// GetRelatedProducts returns products in the same category (excluding the given product)
+func GetRelatedProducts(excludeProductID int, category string, limit int) ([]Product, error) {
+	query := `SELECT items.id, products.id, items.name, items.price, items.image, products.category, 
+		items.is_available, o.id, o.offer_price, o.start_date, o.end_date, o.is_active
+		FROM products 
+		JOIN items ON products.item_id = items.id 
+		LEFT JOIN offers o ON products.id = o.product_id AND o.is_active = TRUE
+		WHERE products.category = $1 AND products.id != $2 AND items.is_available = TRUE
+		ORDER BY RANDOM()
+		LIMIT $3`
+
+	rows, err := db.Query(query, category, excludeProductID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var products []Product
+	for rows.Next() {
+		p, err := scanProduct(rows)
+		if err != nil {
+			return nil, err
+		}
+		products = append(products, p)
+	}
+
+	return products, nil
+}

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="{{.Product.Name}} - {{.Product.Category}} disponível na Loja G-TEC Multimarcas. {{if .Product.IsOnOffer}}Oferta especial!{{end}}">
+  <meta property="og:title" content="{{.Product.Name}} - Loja G-TEC">
+  <meta property="og:description" content="{{.Product.Name}} - {{.Product.Category}} {{if .Product.IsOnOffer}}em oferta!{{end}}">
+  <meta property="og:image" content="{{.Product.Image}}">
+  <meta property="og:type" content="product">
+  <title>{{.Product.Name}} - Loja G-TEC Multimarcas</title>
+  <link href="/static/images/favicon.png" type="image/x-icon" rel="icon">
+  <link href="/static/css/dist/style.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js" integrity="sha384-/TgkGk7p307TH7EXJDuUlgG3Ce1UVolAOFopFekQkkXihi5u/6OCvVKyz1W+idaz" crossorigin="anonymous"></script>
+</head>
+<body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col">
+  <header class="bg-blue-700 shadow-md text-white">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold">Loja G-TEC</h1>
+      <nav class="flex items-center">
+        <a href="/" class="px-4">Home</a>
+        <a href="/#product-type-selection" class="px-4">Produtos</a>
+        <a href="#" class="px-4">Serviços</a>
+        <a href="#" class="px-4">Contato</a>
+        <div class="relative ml-4">
+          <svg id="cart-icon" 
+               xmlns="http://www.w3.org/2000/svg" 
+               class="h-6 w-6 cursor-pointer" 
+               fill="none" 
+               viewBox="0 0 24 24" 
+               stroke="currentColor"
+               hx-get="/cart-modal"
+               hx-target="#cart-container"
+               hx-swap="innerHTML"
+               hx-trigger="click once">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+        </div>
+      </nav>
+    </div>
+  </header>
+  
+  <div id="cart-container" class="fixed top-0 right-0 z-50"></div>
+  
+  <main class="flex-grow container mx-auto px-4 py-8">
+    {{/* Breadcrumb */}}
+    <nav class="mb-6 text-sm">
+      <ol class="list-none p-0 inline-flex">
+        <li class="flex items-center">
+          <a href="/" class="text-blue-600 hover:text-blue-800">Home</a>
+          <svg class="fill-current w-3 h-3 mx-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><path d="M285.476 272.971L91.132 467.314c-9.373 9.373-24.569 9.373-33.941 0l-22.667-22.667c-9.357-9.357-9.375-24.522-.04-33.901L188.505 256 34.484 101.255c-9.335-9.379-9.317-24.544.04-33.901l22.667-22.667c9.373-9.373 24.569-9.373 33.941 0L285.475 239.03c9.373 9.372 9.373 24.568.001 33.941z"/></svg>
+        </li>
+        <li class="flex items-center">
+          <a href="/#product-type-selection" class="text-blue-600 hover:text-blue-800 capitalize">{{.Product.Category}}</a>
+          <svg class="fill-current w-3 h-3 mx-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><path d="M285.476 272.971L91.132 467.314c-9.373 9.373-24.569 9.373-33.941 0l-22.667-22.667c-9.357-9.357-9.375-24.522-.04-33.901L188.505 256 34.484 101.255c-9.335-9.379-9.317-24.544.04-33.901l22.667-22.667c9.373-9.373 24.569-9.373 33.941 0L285.475 239.03c9.373 9.372 9.373 24.568.001 33.941z"/></svg>
+        </li>
+        <li>
+          <span class="text-gray-500" aria-current="page">{{.Product.Name}}</span>
+        </li>
+      </ol>
+    </nav>
+    
+    {{/* Product Main Section */}}
+    <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+      {{if .Product.IsOnOffer}}
+      {{/* Offer Banner */}}
+      <div class="bg-gradient-to-r from-red-500 to-pink-500 text-white py-2 px-4 text-center">
+        <span class="font-bold text-lg">PROMOÇÃO ESPECIAL!</span>
+        {{if .Product.OfferEndDate}}
+        <span class="ml-2">Oferta válida até {{.Product.OfferEndDate.Format "02/01/2006"}}</span>
+        {{end}}
+      </div>
+      {{end}}
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 p-8">
+        {{/* Product Image */}}
+        <div class="flex items-center justify-center bg-gray-50 rounded-lg p-4">
+          <img src="{{.Product.Image}}" alt="{{.Product.Name}}" class="max-w-full max-h-96 object-contain">
+        </div>
+        
+        {{/* Product Info */}}
+        <div class="flex flex-col">
+          {{if .Product.IsOnOffer}}
+          <div class="mb-2">
+            <span class="inline-block bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-full">Promoção</span>
+          </div>
+          {{end}}
+          
+          <h1 class="text-3xl font-bold mb-4">{{.Product.Name}}</h1>
+          
+          {{/* Category Badge */}}
+          <div class="mb-4">
+            <span class="inline-block bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full capitalize">
+              {{.Product.Category}}
+            </span>
+          </div>
+          
+          {{/* Brand Info */}}
+          {{if .Brands}}
+          <div class="mb-4">
+            <span class="text-gray-600">Marca{{if gt (len .Brands) 1}}s{{end}}:</span>
+            <span class="font-semibold">
+              {{range $index, $brand := .Brands}}{{if $index}}, {{end}}{{$brand.Name}}{{end}}
+            </span>
+          </div>
+          {{end}}
+          
+          {{/* Price Section */}}
+          <div class="mb-6">
+            {{if .Product.IsOnOffer}}
+            <div class="mb-2">
+              <span class="text-gray-500 line-through text-lg">De: R$ {{printf "%.2f" .Product.Price}}</span>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span class="text-red-600 font-bold text-4xl">R$ {{printf "%.2f" .Product.OfferPrice}}</span>
+              {{if .Product.OfferEndDate}}
+              <span class="text-red-500 text-sm">até {{.Product.OfferEndDate.Format "02/01/2006"}}</span>
+              {{end}}
+            </div>
+            <div class="mt-2 text-green-600 font-semibold">
+              Economize R$ {{printf "%.2f" (sub .Product.Price .Product.OfferPrice)}}
+            </div>
+            {{else}}
+            <span class="text-gray-800 font-bold text-4xl">R$ {{printf "%.2f" .Product.Price}}</span>
+            {{end}}
+          </div>
+          
+          {{/* Availability */}}
+          <div class="mb-6">
+            {{if .Product.IsAvailable}}
+            <span class="inline-flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full">
+              <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+              Em Estoque
+            </span>
+            {{else}}
+            <span class="inline-flex items-center bg-red-100 text-red-800 px-3 py-1 rounded-full">
+              <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+              Fora de Estoque
+            </span>
+            {{end}}
+          </div>
+          
+          {{/* Countdown Timer for Offers */}}
+          {{if and .Product.IsOnOffer .Product.OfferEndDate}}
+          <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p class="text-red-700 font-semibold mb-2">Termina em:</p>
+            <div id="countdown" class="flex gap-3 text-center" data-end="{{.Product.OfferEndDate.Format "2006-01-02T15:04:05"}}">
+              <div class="bg-red-600 text-white rounded-lg p-2 min-w-16">
+                <span id="days" class="text-2xl font-bold block">00</span>
+                <span class="text-xs">dias</span>
+              </div>
+              <div class="bg-red-600 text-white rounded-lg p-2 min-w-16">
+                <span id="hours" class="text-2xl font-bold block">00</span>
+                <span class="text-xs">horas</span>
+              </div>
+              <div class="bg-red-600 text-white rounded-lg p-2 min-w-16">
+                <span id="minutes" class="text-2xl font-bold block">00</span>
+                <span class="text-xs">min</span>
+              </div>
+              <div class="bg-red-600 text-white rounded-lg p-2 min-w-16">
+                <span id="seconds" class="text-2xl font-bold block">00</span>
+                <span class="text-xs">seg</span>
+              </div>
+            </div>
+          </div>
+          {{end}}
+          
+          {{/* Add to Cart Button */}}
+          <div class="mt-auto">
+            {{if .Product.IsAvailable}}
+            <button id="add-to-cart-btn"
+                    class="w-full bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition-colors duration-200 text-lg font-semibold flex items-center justify-center gap-2 product-detail-card"
+                    data-id="{{.Product.ID}}"
+                    data-name="{{.Product.Name}}"
+                    data-price="{{if .Product.IsOnOffer}}{{.Product.OfferPrice}}{{else}}{{.Product.Price}}{{end}}">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              Adicionar ao Carrinho
+            </button>
+            {{else}}
+            <button class="w-full bg-gray-400 text-white px-8 py-4 rounded-lg cursor-not-allowed text-lg font-semibold flex items-center justify-center gap-2" disabled>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Produto Indisponível
+            </button>
+            {{end}}
+          </div>
+        </div>
+      </div>
+      
+      {{/* Compatibility Info (for refis and pecas) */}}
+      {{if and .CompatibleProducts (or (eq .Product.Category "refis") (eq .Product.Category "pecas"))}}
+      <div class="border-t px-8 py-6 bg-gray-50">
+        <h2 class="text-xl font-bold mb-4">Compatibilidade</h2>
+        <p class="text-gray-600 mb-4">Este produto é compatível com:</p>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {{range .CompatibleProducts}}
+          <a href="/produto/{{.ID}}" class="block bg-white p-3 rounded-lg shadow hover:shadow-md transition-shadow">
+            <img src="{{.Image}}" alt="{{.Name}}" class="w-full h-24 object-contain mb-2">
+            <p class="text-sm font-semibold text-gray-800 truncate">{{.Name}}</p>
+            <p class="text-sm text-gray-600">R$ {{printf "%.2f" .Price}}</p>
+          </a>
+          {{end}}
+        </div>
+      </div>
+      {{end}}
+    </div>
+    
+    {{/* Related Products Section */}}
+    {{if .RelatedProducts}}
+    <div class="mt-12">
+      <h2 class="text-2xl font-bold mb-6">Produtos Relacionados</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        {{range .RelatedProducts}}
+        <a href="/produto/{{.ID}}" class="block bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200">
+          <div class="relative">
+            <img src="{{.Image}}" alt="{{.Name}}" class="w-full h-40 object-contain p-2">
+            {{if and .IsOnOffer (gt .OfferPrice 0.0)}}
+            <span class="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">Promoção</span>
+            {{end}}
+          </div>
+          <div class="p-3">
+            <h3 class="font-semibold text-gray-800 text-sm mb-1 truncate">{{.Name}}</h3>
+            {{if and .IsOnOffer (gt .OfferPrice 0.0)}}
+            <p class="text-gray-500 line-through text-xs">R$ {{printf "%.2f" .Price}}</p>
+            <p class="text-red-600 font-bold">R$ {{printf "%.2f" .OfferPrice}}</p>
+            {{else}}
+            <p class="text-gray-800 font-semibold">R$ {{printf "%.2f" .Price}}</p>
+            {{end}}
+          </div>
+        </a>
+        {{end}}
+      </div>
+    </div>
+    {{end}}
+  </main>
+  
+  <footer class="bg-gray-800 text-white py-8 mt-12">
+    <div class="container mx-auto px-4 text-center">
+      <p>&copy; 2025 Loja G-TEC Multimarcas. Todos os direitos reservados.</p>
+    </div>
+  </footer>
+  
+  <script type="module">
+    import { addToCart } from "/static/js/cart.js"
+    
+    // Add to cart functionality
+    const addToCartBtn = document.getElementById('add-to-cart-btn')
+    if (addToCartBtn) {
+      addToCartBtn.addEventListener('click', () => {
+        const id = addToCartBtn.dataset.id
+        const name = addToCartBtn.dataset.name
+        const price = parseFloat(addToCartBtn.dataset.price)
+        addToCart(name, price, id)
+      })
+    }
+    
+    // Countdown timer for offers
+    const countdownEl = document.getElementById('countdown')
+    if (countdownEl) {
+      const endDate = new Date(countdownEl.dataset.end)
+      
+      function updateCountdown() {
+        const now = new Date()
+        const diff = endDate - now
+        
+        if (diff <= 0) {
+          document.getElementById('days').textContent = '00'
+          document.getElementById('hours').textContent = '00'
+          document.getElementById('minutes').textContent = '00'
+          document.getElementById('seconds').textContent = '00'
+          return
+        }
+        
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+        
+        document.getElementById('days').textContent = String(days).padStart(2, '0')
+        document.getElementById('hours').textContent = String(hours).padStart(2, '0')
+        document.getElementById('minutes').textContent = String(minutes).padStart(2, '0')
+        document.getElementById('seconds').textContent = String(seconds).padStart(2, '0')
+      }
+      
+      updateCountdown()
+      setInterval(updateCountdown, 1000)
+    }
+  </script>
+</body>
+</html>
