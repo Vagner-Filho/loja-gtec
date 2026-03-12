@@ -116,3 +116,12 @@ CREATE TABLE order_items (
 );
 
 CREATE INDEX idx_products_category ON products(category);
+
+-- Enable trigram extension for fuzzy search
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- Add GIN index for fuzzy search performance on items.name
+CREATE INDEX idx_items_name_trgm ON items USING gin(name gin_trgm_ops);
+
+-- Add GIN index for fuzzy search performance on brands.name
+CREATE INDEX idx_brands_name_trgm ON brands USING gin(name gin_trgm_ops);

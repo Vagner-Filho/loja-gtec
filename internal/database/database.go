@@ -53,13 +53,27 @@ func RunSchema(db *sql.DB) error {
 		return err
 	}
 
-	var adminCount uint8
-	err := db.QueryRow("SELECT COUNT(*) FROM admin_users").Scan(&adminCount)
+	// Check if admin_users table exists
+	var tableExists bool
+	err := db.QueryRow(`
+		SELECT EXISTS (
+			SELECT FROM information_schema.tables 
+			WHERE table_schema = 'public' 
+			AND table_name = 'admin_users'
+		)`).Scan(&tableExists)
 	if err != nil {
-		return fmt.Errorf("failed to count admin: %w", err)
+		return fmt.Errorf("failed to check if admin_users table exists: %w", err)
 	}
 
-	if adminCount == 0 && config.Environment == "development" {
+	var adminCount uint8
+	if tableExists {
+		err = db.QueryRow("SELECT COUNT(*) FROM admin_users").Scan(&adminCount)
+		if err != nil {
+			return fmt.Errorf("failed to count admin: %w", err)
+		}
+	}
+
+	if !tableExists || (adminCount == 0 && config.Environment == "development") {
 		schema, err := os.ReadFile("scripts/schema/schema.sql")
 
 		if err != nil {

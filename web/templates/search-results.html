@@ -1,0 +1,47 @@
+{{if or (gt (len .Products) 0) (gt (len .Brands) 0)}}
+  {{if gt (len .Products) 0}}
+    <div class="search-section">
+      <div class="search-section-title">Produtos</div>
+      {{range .Products}}
+        <a href="/produto/{{.ID}}" class="search-result-row">
+          <img src="{{.Image}}" alt="{{.Name}}" class="search-result-image">
+          <div class="search-result-info">
+            <div class="search-result-name">{{.Name}}</div>
+            <div class="search-result-price">
+              {{if .IsOnOffer}}
+                <span class="search-result-offer-price">R$ {{printf "%.2f" .OfferPrice}}</span>
+                <span class="search-result-original-price">R$ {{printf "%.2f" .Price}}</span>
+                <span class="search-result-offer-badge">Oferta</span>
+              {{else}}
+                <span>R$ {{printf "%.2f" .Price}}</span>
+              {{end}}
+            </div>
+          </div>
+        </a>
+      {{end}}
+    </div>
+  {{end}}
+
+  {{if gt (len .Brands) 0}}
+    <div class="search-section">
+      <div class="search-section-title">Marcas</div>
+      {{range .Brands}}
+        <div class="search-result-row"
+             hx-get="/products/all?brands={{.ID}}"
+             hx-target="#products-container"
+             hx-swap="innerHTML"
+             hx-indicator="#loading"
+             hx-on:click="document.getElementById('search-results').classList.add('hidden')">
+          <div class="search-result-info">
+            <div class="search-result-name">{{.Name}}</div>
+            <div class="search-result-brand-count">{{.ProductCount}} produtos</div>
+          </div>
+        </div>
+      {{end}}
+    </div>
+  {{end}}
+{{else}}
+  <div class="search-no-results">
+    Nenhum resultado para "{{.Query}}"
+  </div>
+{{end}}

@@ -88,6 +88,53 @@ func scanProduct(rows *sql.Rows) (Product, error) {
 	return p, nil
 }
 
+// scanSearchProduct scans a product row with similarity score from search queries
+func scanSearchProduct(rows *sql.Rows) (Product, error) {
+	var p Product
+	var offerID sql.NullInt64
+	var offerPrice sql.NullFloat64
+	var startDate, endDate sql.NullTime
+	var isActive sql.NullBool
+	var similarityScore float64 // Ignored, just for ORDER BY
+
+	err := rows.Scan(&p.ID, &p.ProductID, &p.Name, &p.Price, &p.Image, &p.Category, &p.IsAvailable,
+		&offerID, &offerPrice, &startDate, &endDate, &isActive, &similarityScore)
+	if err != nil {
+		return p, err
+	}
+
+	// Check if product has an active offer
+	if offerID.Valid && isActive.Valid && isActive.Bool {
+		now := time.Now()
+		offerStart := startDate.Time
+		offerEnd := endDate.Time
+
+		// Check if offer is currently active based on dates
+		isCurrentlyActive := true
+		if startDate.Valid && now.Before(offerStart) {
+			isCurrentlyActive = false
+		}
+		if endDate.Valid && now.After(offerEnd) {
+			isCurrentlyActive = false
+		}
+
+		if isCurrentlyActive {
+			p.IsOnOffer = true
+			if offerPrice.Valid {
+				p.OfferPrice = offerPrice.Float64
+			}
+			if startDate.Valid {
+				p.OfferStartDate = &offerStart
+			}
+			if endDate.Valid {
+				p.OfferEndDate = &offerEnd
+			}
+		}
+	}
+
+	return p, nil
+}
+
 // GetAllProducts retrieves all products from the database
 func GetAllProducts() ([]Product, error) {
 	query := `SELECT items.id, products.id, items.name, items.price, items.image, products.category, 
@@ -610,6 +657,88 @@ func GetCompatibleProductsByProductID(productID int) ([]Product, error) {
 	}
 
 	return products, nil
+}
+
+// BrandSearchResult represents a brand with its product count for search results
+type BrandSearchResult struct {
+	ID           int    `json:"id"`
+	Name         string `json:"name"`
+	ProductCount int    `json:"productCount"`
+}
+
+// SearchProducts searches for products using fuzzy matching (trigram similarity)
+func SearchProducts(query string, limit int) ([]Product, error) {
+	if query == "" {
+		return []Product{}, nil
+	}
+
+	// Use trigram similarity for fuzzy search with ILIKE as fallback
+	// similarity > 0.3 provides good fuzzy matching while filtering out irrelevant results
+	searchQuery := `%` + query + `%`
+
+	rows, err := db.Query(`
+		SELECT DISTINCT items.id, products.id, items.name, items.price, items.image, products.category, 
+			items.is_available, o.id, o.offer_price, o.start_date, o.end_date, o.is_active,
+			similarity(items.name, $2) as similarity_score
+		FROM products 
+		JOIN items ON products.item_id = items.id 
+		LEFT JOIN offers o ON products.id = o.product_id AND o.is_active = TRUE
+		WHERE items.name ILIKE $1 
+			OR similarity(items.name, $2) > 0.3
+		ORDER BY similarity_score DESC, items.name
+		LIMIT $3`,
+		searchQuery, query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var products []Product
+	for rows.Next() {
+		p, err := scanSearchProduct(rows)
+		if err != nil {
+			return nil, err
+		}
+		products = append(products, p)
+	}
+
+	return products, nil
+}
+
+// SearchBrandsWithCount searches for brands using fuzzy matching and returns product counts
+func SearchBrandsWithCount(query string, limit int) ([]BrandSearchResult, error) {
+	if query == "" {
+		return []BrandSearchResult{}, nil
+	}
+
+	// Use trigram similarity for fuzzy search with ILIKE as fallback
+	searchQuery := `%` + query + `%`
+
+	rows, err := db.Query(`
+		SELECT b.id, b.name, COUNT(DISTINCT pb.product_id) as product_count
+		FROM brands b
+		LEFT JOIN product_brands pb ON b.id = pb.brand_id
+		WHERE b.name ILIKE $1 
+			OR similarity(b.name, $2) > 0.3
+		GROUP BY b.id, b.name
+		ORDER BY similarity(b.name, $2) DESC, b.name
+		LIMIT $3`,
+		searchQuery, query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var brands []BrandSearchResult
+	for rows.Next() {
+		var b BrandSearchResult
+		if err := rows.Scan(&b.ID, &b.Name, &b.ProductCount); err != nil {
+			return nil, err
+		}
+		brands = append(brands, b)
+	}
+
+	return brands, nil
 }
 
 // GetRelatedProducts returns products in the same category (excluding the given product)

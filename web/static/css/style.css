@@ -28,3 +28,52 @@
 button {
   @apply cursor-pointer;
 }
+
+/* Search dropdown styles */
+.search-section {
+  @apply border-b border-gray-200 last:border-b-0;
+}
+
+.search-section-title {
+  @apply px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider;
+}
+
+.search-result-row {
+  @apply flex items-center gap-3 px-4 py-3 hover:bg-blue-50 cursor-pointer transition-colors duration-150 border-b border-gray-100 last:border-b-0;
+}
+
+.search-result-image {
+  @apply w-10 h-10 object-cover rounded;
+}
+
+.search-result-info {
+  @apply flex-1 min-w-0;
+}
+
+.search-result-name {
+  @apply text-sm font-medium text-gray-800 truncate;
+}
+
+.search-result-price {
+  @apply text-sm text-gray-600 mt-0.5;
+}
+
+.search-result-offer-price {
+  @apply font-semibold text-red-600;
+}
+
+.search-result-original-price {
+  @apply line-through text-gray-400 ml-2;
+}
+
+.search-result-offer-badge {
+  @apply ml-2 px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded-full;
+}
+
+.search-result-brand-count {
+  @apply text-xs text-gray-500 mt-0.5;
+}
+
+.search-no-results {
+  @apply px-4 py-6 text-center text-gray-500;
+}

@@ -17,6 +17,32 @@
           <a href="#" class="px-4">Produtos</a>
           <a href="#" class="px-4">Serviços</a>
           <a href="#" class="px-4">Contato</a>
+          
+          <!-- Search Component -->
+          <div class="relative ml-4 mr-4" id="search-container">
+            <input 
+              type="text" 
+              id="search-input"
+              name="q"
+              placeholder="Buscar produtos ou marcas..."
+              class="w-64 px-4 py-2 rounded-lg text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              hx-get="/api/search"
+              hx-trigger="keyup changed delay:200ms"
+              hx-target="#search-results"
+              hx-swap="innerHTML"
+              hx-indicator="#search-loading"
+              hx-on:focus="document.getElementById('search-results').classList.remove('hidden')"
+              autocomplete="off"
+            >
+            <div id="search-loading" class="htmx-indicator absolute right-3 top-1/2 transform -translate-y-1/2">
+              <svg class="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </div>
+            <div id="search-results" class="hidden absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 max-h-96 overflow-y-auto z-50"></div>
+          </div>
+          
           <div class="relative ml-4">
             <svg id="cart-icon" 
                  xmlns="http://www.w3.org/2000/svg" 
@@ -270,6 +296,25 @@
         btn.addEventListener('click', function() {
           currentCategory = this.getAttribute('data-category') || 'all';
         });
+      });
+
+      // Search functionality: close dropdown when clicking outside
+      document.addEventListener('click', function(e) {
+        const searchContainer = document.getElementById('search-container');
+        const searchResults = document.getElementById('search-results');
+        if (searchContainer && searchResults && !searchContainer.contains(e.target)) {
+          searchResults.classList.add('hidden');
+        }
+      });
+
+      // Search functionality: close dropdown on ESC key
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          const searchResults = document.getElementById('search-results');
+          if (searchResults) {
+            searchResults.classList.add('hidden');
+          }
+        }
       });
     </script>
   </body>

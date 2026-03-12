@@ -550,6 +550,63 @@ func main() {
 		}
 	})
 
+	// Search endpoint for fuzzy product and brand search
+	http.HandleFunc("/api/search", func(w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query().Get("q")
+		if query == "" {
+			// Return empty results if no query
+			tmpl, err := template.ParseFiles("web/templates/search-results.html")
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			tmpl.Execute(w, map[string]interface{}{
+				"Query":    "",
+				"Products": []products.Product{},
+				"Brands":   []products.BrandSearchResult{},
+			})
+			return
+		}
+
+		// Search for products (max 6 results)
+		productResults, err := products.SearchProducts(query, 6)
+		if err != nil {
+			log.Printf("Error searching products: %v", err)
+			http.Error(w, "Error searching products", http.StatusInternalServerError)
+			return
+		}
+
+		// Search for brands (max 6 results)
+		brandResults, err := products.SearchBrandsWithCount(query, 6)
+		if err != nil {
+			log.Printf("Error searching brands: %v", err)
+			http.Error(w, "Error searching brands", http.StatusInternalServerError)
+			return
+		}
+
+		// Prepare data for template
+		searchData := struct {
+			Query    string
+			Products []products.Product
+			Brands   []products.BrandSearchResult
+		}{
+			Query:    query,
+			Products: productResults,
+			Brands:   brandResults,
+		}
+
+		// Render the search results template
+		tmpl, err := template.ParseFiles("web/templates/search-results.html")
+		if err != nil {
+			log.Printf("Error parsing search results template: %v", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html")
+		tmpl.Execute(w, searchData)
+	})
+
 	// Product detail page
 	http.HandleFunc("/produto/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
