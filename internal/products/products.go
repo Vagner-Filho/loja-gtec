@@ -16,6 +16,8 @@ type Product struct {
 	Price          float64    `json:"price"`
 	Image          string     `json:"image"`
 	Category       string     `json:"category"`
+	Description    string     `json:"description,omitempty"`
+	SKU            string     `json:"sku,omitempty"`
 	IsAvailable    bool       `json:"isAvailable"`
 	IsOnOffer      bool       `json:"isOnOffer"`
 	OfferPrice     float64    `json:"offerPrice,omitempty"`
@@ -23,6 +25,31 @@ type Product struct {
 	OfferEndDate   *time.Time `json:"offerEndDate,omitempty"`
 	BrandIDs       []int      `json:"brandIds,omitempty"`
 	FitsProductIDs []int      `json:"fitsProductIds,omitempty"`
+}
+
+type ProductImage struct {
+	ID           int    `json:"id"`
+	ProductID    int    `json:"productId"`
+	ImageURL     string `json:"imageUrl"`
+	DisplayOrder int    `json:"displayOrder"`
+	IsPrimary    bool   `json:"isPrimary"`
+}
+
+type ProductDimension struct {
+	ID        int     `json:"id"`
+	ProductID int     `json:"productId"`
+	Weight    float64 `json:"weight"`
+	Length    float64 `json:"length"`
+	Width     float64 `json:"width"`
+	Height    float64 `json:"height"`
+}
+
+type ProductTechnicalSpec struct {
+	ID           int    `json:"id"`
+	ProductID    int    `json:"productId"`
+	SpecKey      string `json:"specKey"`
+	SpecValue    string `json:"specValue"`
+	DisplayOrder int    `json:"displayOrder"`
 }
 
 type Brand struct {
@@ -50,7 +77,7 @@ func scanProduct(rows *sql.Rows) (Product, error) {
 	var startDate, endDate sql.NullTime
 	var isActive sql.NullBool
 
-	err := rows.Scan(&p.ID, &p.ProductID, &p.Name, &p.Price, &p.Image, &p.Category, &p.IsAvailable,
+	err := rows.Scan(&p.ID, &p.ProductID, &p.Name, &p.Price, &p.Image, &p.Category, &p.Description, &p.SKU, &p.IsAvailable,
 		&offerID, &offerPrice, &startDate, &endDate, &isActive)
 	if err != nil {
 		return p, err
@@ -97,7 +124,7 @@ func scanSearchProduct(rows *sql.Rows) (Product, error) {
 	var isActive sql.NullBool
 	var similarityScore float64 // Ignored, just for ORDER BY
 
-	err := rows.Scan(&p.ID, &p.ProductID, &p.Name, &p.Price, &p.Image, &p.Category, &p.IsAvailable,
+	err := rows.Scan(&p.ID, &p.ProductID, &p.Name, &p.Price, &p.Image, &p.Category, &p.Description, &p.SKU, &p.IsAvailable,
 		&offerID, &offerPrice, &startDate, &endDate, &isActive, &similarityScore)
 	if err != nil {
 		return p, err
@@ -137,11 +164,12 @@ func scanSearchProduct(rows *sql.Rows) (Product, error) {
 
 // GetAllProducts retrieves all products from the database
 func GetAllProducts() ([]Product, error) {
-	query := `SELECT items.id, products.id, items.name, items.price, items.image, products.category, 
-		items.is_available, o.id, o.offer_price, o.start_date, o.end_date, o.is_active
+	query := `SELECT items.id, products.id, items.name, items.price, COALESCE(pi.image_url, ''), products.category, 
+		products.description, products.sku, items.is_available, o.id, o.offer_price, o.start_date, o.end_date, o.is_active
 		FROM products 
 		JOIN items ON products.item_id = items.id 
 		LEFT JOIN offers o ON products.id = o.product_id AND o.is_active = TRUE
+		LEFT JOIN product_images pi ON products.id = pi.product_id AND pi.is_primary = TRUE
 		ORDER BY items.id DESC`
 
 	rows, err := db.Query(query)
@@ -176,11 +204,12 @@ func GetProductsByCategoryAndBrands(category string, brandIDs []int) ([]Product,
 		return GetAllProducts()
 	}
 
-	query := `SELECT DISTINCT items.id, products.id, items.name, items.price, items.image, products.category, 
-		items.is_available, o.id, o.offer_price, o.start_date, o.end_date, o.is_active
+	query := `SELECT DISTINCT items.id, products.id, items.name, items.price, COALESCE(pi.image_url, ''), products.category, 
+		products.description, products.sku, items.is_available, o.id, o.offer_price, o.start_date, o.end_date, o.is_active
 		FROM products 
 		JOIN items ON products.item_id = items.id
-		LEFT JOIN offers o ON products.id = o.product_id AND o.is_active = TRUE`
+		LEFT JOIN offers o ON products.id = o.product_id AND o.is_active = TRUE
+		LEFT JOIN product_images pi ON products.id = pi.product_id AND pi.is_primary = TRUE`
 	var args []interface{}
 	var conditions []string
 
@@ -228,16 +257,17 @@ func GetProductByID(id int) (*Product, error) {
 	var startDate, endDate sql.NullTime
 	var isActive sql.NullBool
 
-	query := `SELECT items.id, products.id, items.name, items.price, items.image, 
-		products.category, items.is_available, o.id, o.offer_price, 
+	query := `SELECT items.id, products.id, items.name, items.price, COALESCE(pi.image_url, ''), 
+		products.category, products.description, products.sku, items.is_available, o.id, o.offer_price, 
 		o.start_date, o.end_date, o.is_active
 		FROM products 
 		JOIN items ON products.item_id = items.id 
 		LEFT JOIN offers o ON products.id = o.product_id AND o.is_active = TRUE
+		LEFT JOIN product_images pi ON products.id = pi.product_id AND pi.is_primary = TRUE
 		WHERE items.id = $1`
 
 	err := db.QueryRow(query, id).Scan(
-		&p.ID, &productID, &p.Name, &p.Price, &p.Image, &p.Category, &p.IsAvailable,
+		&p.ID, &productID, &p.Name, &p.Price, &p.Image, &p.Category, &p.Description, &p.SKU, &p.IsAvailable,
 		&offerID, &offerPrice, &startDate, &endDate, &isActive,
 	)
 	if err != nil {
@@ -298,7 +328,7 @@ func GetCurrentPrice(product Product) float64 {
 }
 
 // CreateProduct creates a new product in the database
-func CreateProduct(name string, price float64, image, category string, isAvailable bool, brandIDs, fitsProductIDs []int) (*Product, error) {
+func CreateProduct(name string, price float64, category string, description, sku string, isAvailable bool, brandIDs, fitsProductIDs []int) (*Product, error) {
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
@@ -306,8 +336,8 @@ func CreateProduct(name string, price float64, image, category string, isAvailab
 
 	var itemID int
 	err = tx.QueryRow(
-		"INSERT INTO items (name, price, image, is_available) VALUES ($1, $2, $3, $4) RETURNING id",
-		name, price, image, isAvailable,
+		"INSERT INTO items (name, price, is_available) VALUES ($1, $2, $3) RETURNING id",
+		name, price, isAvailable,
 	).Scan(&itemID)
 	if err != nil {
 		_ = tx.Rollback()
@@ -316,8 +346,8 @@ func CreateProduct(name string, price float64, image, category string, isAvailab
 
 	var productID int
 	err = tx.QueryRow(
-		"INSERT INTO products (category, item_id) VALUES ($1, $2) RETURNING id",
-		category, itemID,
+		"INSERT INTO products (category, item_id, description, sku) VALUES ($1, $2, $3, $4) RETURNING id",
+		category, itemID, description, sku,
 	).Scan(&productID)
 	if err != nil {
 		_ = tx.Rollback()
@@ -343,8 +373,9 @@ func CreateProduct(name string, price float64, image, category string, isAvailab
 		ProductID:      productID,
 		Name:           name,
 		Price:          price,
-		Image:          image,
 		Category:       category,
+		Description:    description,
+		SKU:            sku,
 		IsAvailable:    isAvailable,
 		BrandIDs:       uniqueIDs(brandIDs),
 		FitsProductIDs: uniqueIDs(fitsProductIDs),
@@ -352,15 +383,15 @@ func CreateProduct(name string, price float64, image, category string, isAvailab
 }
 
 // UpdateProduct updates an existing product in the database
-func UpdateProduct(id int, name string, price float64, image, category string, isAvailable bool, brandIDs, fitsProductIDs []int) error {
+func UpdateProduct(id int, name string, price float64, category string, description, sku string, isAvailable bool, brandIDs, fitsProductIDs []int) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
 
 	result, err := tx.Exec(
-		"UPDATE items SET name = $1, price = $2, image = $3, is_available = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5",
-		name, price, image, isAvailable, id,
+		"UPDATE items SET name = $1, price = $2, is_available = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4",
+		name, price, isAvailable, id,
 	)
 	if err != nil {
 		_ = tx.Rollback()
@@ -379,8 +410,8 @@ func UpdateProduct(id int, name string, price float64, image, category string, i
 	}
 
 	_, err = tx.Exec(
-		"UPDATE products SET category = $1 WHERE item_id = $2",
-		category, id,
+		"UPDATE products SET category = $1, description = $2, sku = $3 WHERE item_id = $4",
+		category, description, sku, id,
 	)
 	if err != nil {
 		_ = tx.Rollback()
@@ -632,12 +663,13 @@ func GetBrandNamesByProductID(productID int) ([]Brand, error) {
 
 // GetCompatibleProductsByProductID returns products compatible with this part
 func GetCompatibleProductsByProductID(productID int) ([]Product, error) {
-	query := `SELECT items.id, products.id, items.name, items.price, items.image, products.category, 
-		items.is_available, o.id, o.offer_price, o.start_date, o.end_date, o.is_active
+	query := `SELECT items.id, products.id, items.name, items.price, COALESCE(pi.image_url, ''), products.category, 
+		products.description, products.sku, items.is_available, o.id, o.offer_price, o.start_date, o.end_date, o.is_active
 		FROM product_compatibility pc
 		JOIN products ON pc.fits_product_id = products.id
 		JOIN items ON products.item_id = items.id
 		LEFT JOIN offers o ON products.id = o.product_id AND o.is_active = TRUE
+		LEFT JOIN product_images pi ON products.id = pi.product_id AND pi.is_primary = TRUE
 		WHERE pc.part_product_id = $1
 		ORDER BY items.name`
 
@@ -677,12 +709,13 @@ func SearchProducts(query string, limit int) ([]Product, error) {
 	searchQuery := `%` + query + `%`
 
 	rows, err := db.Query(`
-		SELECT DISTINCT items.id, products.id, items.name, items.price, items.image, products.category, 
-			items.is_available, o.id, o.offer_price, o.start_date, o.end_date, o.is_active,
+		SELECT DISTINCT items.id, products.id, items.name, items.price, COALESCE(pi.image_url, ''), products.category, 
+			products.description, products.sku, items.is_available, o.id, o.offer_price, o.start_date, o.end_date, o.is_active,
 			similarity(items.name, $2) as similarity_score
 		FROM products 
 		JOIN items ON products.item_id = items.id 
 		LEFT JOIN offers o ON products.id = o.product_id AND o.is_active = TRUE
+		LEFT JOIN product_images pi ON products.id = pi.product_id AND pi.is_primary = TRUE
 		WHERE items.name ILIKE $1 
 			OR similarity(items.name, $2) > 0.3
 		ORDER BY similarity_score DESC, items.name
@@ -743,11 +776,12 @@ func SearchBrandsWithCount(query string, limit int) ([]BrandSearchResult, error)
 
 // GetRelatedProducts returns products in the same category (excluding the given product)
 func GetRelatedProducts(excludeProductID int, category string, limit int) ([]Product, error) {
-	query := `SELECT items.id, products.id, items.name, items.price, items.image, products.category, 
-		items.is_available, o.id, o.offer_price, o.start_date, o.end_date, o.is_active
+	query := `SELECT items.id, products.id, items.name, items.price, COALESCE(pi.image_url, ''), products.category, 
+		products.description, products.sku, items.is_available, o.id, o.offer_price, o.start_date, o.end_date, o.is_active
 		FROM products 
 		JOIN items ON products.item_id = items.id 
 		LEFT JOIN offers o ON products.id = o.product_id AND o.is_active = TRUE
+		LEFT JOIN product_images pi ON products.id = pi.product_id AND pi.is_primary = TRUE
 		WHERE products.category = $1 AND products.id != $2 AND items.is_available = TRUE
 		ORDER BY RANDOM()
 		LIMIT $3`
@@ -768,4 +802,145 @@ func GetRelatedProducts(excludeProductID int, category string, limit int) ([]Pro
 	}
 
 	return products, nil
+}
+
+func GetProductImages(productID int) ([]ProductImage, error) {
+	query := `SELECT id, product_id, image_url, display_order, is_primary 
+		FROM product_images WHERE product_id = $1 ORDER BY display_order, id`
+
+	rows, err := db.Query(query, productID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var images []ProductImage
+	for rows.Next() {
+		var img ProductImage
+		if err := rows.Scan(&img.ID, &img.ProductID, &img.ImageURL, &img.DisplayOrder, &img.IsPrimary); err != nil {
+			return nil, err
+		}
+		images = append(images, img)
+	}
+
+	return images, nil
+}
+
+func GetPrimaryProductImage(productID int) (string, error) {
+	var imageURL string
+	err := db.QueryRow(
+		`SELECT image_url FROM product_images WHERE product_id = $1 AND is_primary = TRUE`,
+		productID,
+	).Scan(&imageURL)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return imageURL, nil
+}
+
+func CreateProductImage(productID int, imageURL string, displayOrder int, isPrimary bool) (*ProductImage, error) {
+	if isPrimary {
+		_, err := db.Exec(`UPDATE product_images SET is_primary = FALSE WHERE product_id = $1`, productID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var img ProductImage
+	err := db.QueryRow(
+		`INSERT INTO product_images (product_id, image_url, display_order, is_primary) 
+		VALUES ($1, $2, $3, $4) RETURNING id, product_id, image_url, display_order, is_primary`,
+		productID, imageURL, displayOrder, isPrimary,
+	).Scan(&img.ID, &img.ProductID, &img.ImageURL, &img.DisplayOrder, &img.IsPrimary)
+	if err != nil {
+		return nil, err
+	}
+	return &img, nil
+}
+
+func DeleteProductImage(imageID int) error {
+	_, err := db.Exec(`DELETE FROM product_images WHERE id = $1`, imageID)
+	return err
+}
+
+func GetProductDimensions(productID int) (*ProductDimension, error) {
+	var dim ProductDimension
+	err := db.QueryRow(
+		`SELECT id, product_id, weight, length, width, height FROM product_dimensions WHERE product_id = $1`,
+		productID,
+	).Scan(&dim.ID, &dim.ProductID, &dim.Weight, &dim.Length, &dim.Width, &dim.Height)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &dim, nil
+}
+
+func SaveProductDimensions(productID int, weight, length, width, height float64) error {
+	_, err := db.Exec(`
+		INSERT INTO product_dimensions (product_id, weight, length, width, height)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (product_id) DO UPDATE SET weight = $2, length = $3, width = $4, height = $5`,
+		productID, weight, length, width, height,
+	)
+	return err
+}
+
+func DeleteProductDimensions(productID int) error {
+	_, err := db.Exec(`DELETE FROM product_dimensions WHERE product_id = $1`, productID)
+	return err
+}
+
+func GetProductTechnicalSpecs(productID int) ([]ProductTechnicalSpec, error) {
+	query := `SELECT id, product_id, spec_key, spec_value, display_order 
+		FROM product_technical_specs WHERE product_id = $1 ORDER BY display_order, id`
+
+	rows, err := db.Query(query, productID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var specs []ProductTechnicalSpec
+	for rows.Next() {
+		var spec ProductTechnicalSpec
+		if err := rows.Scan(&spec.ID, &spec.ProductID, &spec.SpecKey, &spec.SpecValue, &spec.DisplayOrder); err != nil {
+			return nil, err
+		}
+		specs = append(specs, spec)
+	}
+
+	return specs, nil
+}
+
+func SaveProductTechnicalSpecs(productID int, specs []ProductTechnicalSpec) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`DELETE FROM product_technical_specs WHERE product_id = $1`, productID)
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	for _, spec := range specs {
+		_, err = tx.Exec(
+			`INSERT INTO product_technical_specs (product_id, spec_key, spec_value, display_order) 
+			VALUES ($1, $2, $3, $4)`,
+			productID, spec.SpecKey, spec.SpecValue, spec.DisplayOrder,
+		)
+		if err != nil {
+			_ = tx.Rollback()
+			return err
+		}
+	}
+
+	return tx.Commit()
 }

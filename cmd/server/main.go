@@ -503,14 +503,16 @@ func main() {
 		// Convert offers to products format for template
 		prods := make([]products.Product, len(offerProducts))
 		for i, offer := range offerProducts {
+			// Get primary image from product_images
+			image, _ := products.GetPrimaryProductImage(offer.ProductID)
 			prods[i] = products.Product{
 				ID:             offer.ID,
 				ProductID:      offer.ProductID,
 				Name:           offer.Name,
 				Price:          offer.Price,
-				Image:          offer.Image,
+				Image:          image,
 				Category:       offer.Category,
-				IsOnOffer:      true, // Active offers are already filtered by GetActiveOffers
+				IsOnOffer:      true,
 				OfferPrice:     offer.OfferPrice,
 				OfferStartDate: offer.StartDate,
 				OfferEndDate:   offer.EndDate,
@@ -1496,6 +1498,8 @@ func main() {
 			name := r.FormValue("name")
 			priceStr := r.FormValue("price")
 			category := r.FormValue("category")
+			description := r.FormValue("description")
+			sku := r.FormValue("sku")
 			isAvailableStr := r.FormValue("is_available")
 			brandIDs, err := parseIDList(r.Form["brand_ids"])
 			if err != nil {
@@ -1524,20 +1528,10 @@ func main() {
 				return
 			}
 
-			// Handle file upload
-			imagePath, err := handleImageUpload(r, "image")
-			if err != nil {
-				http.Error(w, fmt.Sprintf("Image upload failed: %v", err), http.StatusBadRequest)
-				return
-			}
-
 			isAvailable := isAvailableStr == "on"
 			// Create product
-			product, err := products.CreateProduct(name, price, imagePath, category, isAvailable, brandIDs, fitsProductIDs)
+			product, err := products.CreateProduct(name, price, category, description, sku, isAvailable, brandIDs, fitsProductIDs)
 			if err != nil {
-				// Clean up uploaded file if product creation fails
-				os.Remove(filepath.Join(uploadPath, filepath.Base(imagePath)))
-
 				// Return error message for HTMX
 				if r.Header.Get("HX-Request") == "true" {
 					tmpl, _ := template.ParseFiles("web/templates/admin-error-message.html")
@@ -1606,7 +1600,8 @@ func main() {
 			name := r.FormValue("name")
 			priceStr := r.FormValue("price")
 			category := r.FormValue("category")
-			currentImage := r.FormValue("current_image")
+			description := r.FormValue("description")
+			sku := r.FormValue("sku")
 			isAvailableStr := r.FormValue("is_available")
 			brandIDs, err := parseIDList(r.Form["brand_ids"])
 			if err != nil {
@@ -1638,28 +1633,8 @@ func main() {
 			// Parse is_available checkbox (unchecked checkboxes are not sent in form data)
 			isAvailable := isAvailableStr == "on"
 
-			// Check if new image was uploaded
-			imagePath := currentImage
-			file, _, err := r.FormFile("image")
-			if err == nil {
-				// New image uploaded
-				file.Close()
-				newImagePath, err := handleImageUpload(r, "image")
-				if err != nil {
-					http.Error(w, fmt.Sprintf("Image upload failed: %v", err), http.StatusBadRequest)
-					return
-				}
-				imagePath = newImagePath
-
-				// Delete old image if it's in uploads folder
-				if strings.Contains(currentImage, "/uploads/") {
-					oldImagePath := filepath.Join("web/static", strings.TrimPrefix(currentImage, "/static/"))
-					os.Remove(oldImagePath)
-				}
-			}
-
 			// Update product
-			if err := products.UpdateProduct(id, name, price, imagePath, category, isAvailable, brandIDs, fitsProductIDs); err != nil {
+			if err := products.UpdateProduct(id, name, price, category, description, sku, isAvailable, brandIDs, fitsProductIDs); err != nil {
 				// Return error message for HTMX
 				if r.Header.Get("HX-Request") == "true" {
 					tmpl, _ := template.ParseFiles("web/templates/admin-error-message.html")

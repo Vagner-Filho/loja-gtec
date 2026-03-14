@@ -1,4 +1,73 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Base font configuration */
+html {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Liquid Glass - Subtle */
+.glass {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.glass-strong {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.glass-dark {
+  background: rgba(29, 78, 216, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Subtle water-inspired card */
+.water-card {
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    0 4px 12px rgba(37, 99, 235, 0.06);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.water-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 
+    0 4px 6px rgba(0, 0, 0, 0.05),
+    0 12px 24px rgba(37, 99, 235, 0.1);
+}
+
+/* Header sticky styles */
+.header-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+/* Mobile menu */
+.mobile-menu {
+  transform: translateX(100%);
+  transition: transform 0.3s ease-in-out;
+}
+
+.mobile-menu.open {
+  transform: translateX(0);
+}
+
+/* Search dropdown glass effect */
+.search-dropdown {
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
 
 /* Status badge styles */
 .status-badge {
@@ -76,4 +145,88 @@ button {
 
 .search-no-results {
   @apply px-4 py-6 text-center text-gray-500;
+}
+
+/* Category filter pills */
+.filter-pill {
+  @apply px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border border-transparent;
+}
+
+.filter-pill:hover {
+  @apply border-blue-200;
+  background: rgba(219, 234, 254, 0.5);
+}
+
+.filter-pill.active {
+  @apply text-white border-blue-600;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+}
+
+/* Brand filter buttons */
+.brand-pill {
+  @apply px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 border;
+  background: rgba(243, 244, 246, 0.8);
+  border-color: rgba(229, 231, 235, 0.8);
+}
+
+.brand-pill:hover {
+  background: rgba(219, 234, 254, 0.6);
+  border-color: rgba(191, 219, 254, 0.8);
+}
+
+.brand-pill.active {
+  @apply text-white border-blue-500;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+/* Product card enhancements */
+.product-card-enhanced {
+  @apply relative overflow-hidden;
+  border-radius: 12px;
+}
+
+.product-card-enhanced::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(180deg, transparent 60%, rgba(37, 99, 235, 0.03) 100%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.product-card-enhanced:hover::before {
+  opacity: 1;
+}
+
+/* Cart icon pulse on add */
+@keyframes cart-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.cart-pulse {
+  animation: cart-pulse 0.3s ease-out;
+}
+
+/* Loading shimmer for products */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.loading-shimmer {
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Focus visible styles for accessibility */
+*:focus-visible {
+  @apply outline-none ring-2 ring-blue-500 ring-offset-2;
 }

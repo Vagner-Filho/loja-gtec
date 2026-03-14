@@ -13,7 +13,6 @@ type Offer struct {
 	Name       string     `json:"name"`
 	Price      float64    `json:"price"`
 	OfferPrice float64    `json:"offerPrice"`
-	Image      string     `json:"image"`
 	Category   string     `json:"category"`
 	StartDate  *time.Time `json:"startDate,omitempty"`
 	EndDate    *time.Time `json:"endDate,omitempty"`
@@ -60,7 +59,7 @@ func IsOfferActive(offer Offer) bool {
 func GetActiveOffers() ([]Offer, error) {
 	query := `
 		SELECT o.id, o.product_id, i.name, i.price, o.offer_price, 
-		       i.image, p.category, o.start_date, o.end_date, o.is_active
+		       p.category, o.start_date, o.end_date, o.is_active
 		FROM offers o
 		JOIN products p ON o.product_id = p.id
 		JOIN items i ON p.item_id = i.id
@@ -80,7 +79,7 @@ func GetActiveOffers() ([]Offer, error) {
 		var o Offer
 		var startDate, endDate sql.NullTime
 		err := rows.Scan(&o.ID, &o.ProductID, &o.Name, &o.Price, &o.OfferPrice,
-			&o.Image, &o.Category, &startDate, &endDate, &o.IsActive)
+			&o.Category, &startDate, &endDate, &o.IsActive)
 		if err != nil {
 			return nil, err
 		}
@@ -111,7 +110,7 @@ func GetActiveOffers() ([]Offer, error) {
 func GetAllOffers() ([]Offer, error) {
 	query := `
 		SELECT o.id, o.product_id, i.name, i.price, o.offer_price, 
-		       i.image, p.category, o.start_date, o.end_date, o.is_active
+		       p.category, o.start_date, o.end_date, o.is_active
 		FROM offers o
 		JOIN products p ON o.product_id = p.id
 		JOIN items i ON p.item_id = i.id
@@ -129,7 +128,7 @@ func GetAllOffers() ([]Offer, error) {
 		var o Offer
 		var startDate, endDate sql.NullTime
 		err := rows.Scan(&o.ID, &o.ProductID, &o.Name, &o.Price, &o.OfferPrice,
-			&o.Image, &o.Category, &startDate, &endDate, &o.IsActive)
+			&o.Category, &startDate, &endDate, &o.IsActive)
 		if err != nil {
 			return nil, err
 		}
@@ -279,7 +278,7 @@ func ToggleOfferStatus(offerID int) (bool, error) {
 func GetOfferByProductID(productID int) (*Offer, error) {
 	query := `
 		SELECT o.id, o.product_id, i.name, i.price, o.offer_price, 
-		       i.image, p.category, o.start_date, o.end_date, o.is_active
+		       p.category, o.start_date, o.end_date, o.is_active
 		FROM offers o
 		JOIN products p ON o.product_id = p.id
 		JOIN items i ON p.item_id = i.id
@@ -290,7 +289,7 @@ func GetOfferByProductID(productID int) (*Offer, error) {
 	var startDate, endDate sql.NullTime
 	err := db.QueryRow(query, productID).Scan(
 		&o.ID, &o.ProductID, &o.Name, &o.Price, &o.OfferPrice,
-		&o.Image, &o.Category, &startDate, &endDate, &o.IsActive,
+		&o.Category, &startDate, &endDate, &o.IsActive,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -313,7 +312,7 @@ func GetOfferByProductID(productID int) (*Offer, error) {
 func GetActiveOfferByProductID(productID int) (*Offer, error) {
 	query := `
 		SELECT o.id, o.product_id, i.name, i.price, o.offer_price, 
-		       i.image, p.category, o.start_date, o.end_date, o.is_active
+		       p.category, o.start_date, o.end_date, o.is_active
 		FROM offers o
 		JOIN products p ON o.product_id = p.id
 		JOIN items i ON p.item_id = i.id
@@ -324,7 +323,7 @@ func GetActiveOfferByProductID(productID int) (*Offer, error) {
 	var startDate, endDate sql.NullTime
 	err := db.QueryRow(query, productID).Scan(
 		&o.ID, &o.ProductID, &o.Name, &o.Price, &o.OfferPrice,
-		&o.Image, &o.Category, &startDate, &endDate, &o.IsActive,
+		&o.Category, &startDate, &endDate, &o.IsActive,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
