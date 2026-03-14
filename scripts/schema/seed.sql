@@ -14,6 +14,10 @@ INSERT INTO products (category, item_id, description, sku) VALUES
 INSERT INTO services (description, item_id) VALUES
     ('Instalação profissional, certificada e de garantia para produtos comprados na loja.', 1);
 
+INSERT INTO brands (name) VALUES
+    ('IBBL'),
+    ('Lorenzetti');
+
 INSERT INTO product_dimensions (product_id, weight, length, width, height) VALUES
     (1, 2.500, 30.00, 20.00, 40.00),
     (2, 5.000, 35.00, 25.00, 45.00),
@@ -45,5 +49,8 @@ INSERT INTO product_technical_specs (product_id, spec_key, spec_value, display_o
 INSERT INTO offers (product_id, offer_price, start_date, end_date, is_active) VALUES
     (1, 599.99, '2026-01-01', '2026-12-31', TRUE),
     (4, 79.99, '2026-01-01', '2026-06-30', TRUE);
+
+INSERT INTO banners (image_path, title, link_url, display_order, is_active) VALUES
+    ('/static/images/banner-oferta-purificador.jpg', 'Oferta especial: Purificador IBBL Mio', '/?category=purificadores', 1, TRUE);
 
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);

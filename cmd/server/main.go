@@ -43,6 +43,7 @@ type adminEditData struct {
 	Products        []products.ProductOption
 	BrandSelections map[int]bool
 	FitSelections   map[int]bool
+	ProductImages   []products.ProductImage
 }
 
 type brandModalData struct {
@@ -545,7 +546,7 @@ func main() {
 		for _, brand := range brands {
 			fmt.Fprintf(w, `<button type="button" 
 				data-brand-id="%d" 
-				class="brand-filter-btn px-3 py-1 rounded-full text-sm transition-colors duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300"
+				class="brand-pill px-3 py-1 rounded-full text-sm transition-colors duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300"
 				onclick="toggleBrandFilter(this)">
 				%s
 			</button>`, brand.ID, brand.Name)
@@ -1542,6 +1543,19 @@ func main() {
 				return
 			}
 
+			// Handle multiple image uploads
+			if err := handleMultipleImageUploads(r, "images", product.ProductID); err != nil {
+				// Clean up product if image upload fails
+				products.DeleteProduct(product.ID)
+				if r.Header.Get("HX-Request") == "true" {
+					tmpl, _ := template.ParseFiles("web/templates/admin-error-message.html")
+					tmpl.Execute(w, err.Error())
+				} else {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
+				return
+			}
+
 			// Return product card HTML for HTMX
 			if r.Header.Get("HX-Request") == "true" {
 				// Create function map for template
@@ -1580,8 +1594,63 @@ func main() {
 	}))
 
 	http.HandleFunc("/api/admin/products/", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
-		// Extract ID from path
+		// Extract path after /api/admin/products/
 		path := strings.TrimPrefix(r.URL.Path, "/api/admin/products/")
+		parts := strings.Split(path, "/")
+
+		// Check if this is an image delete request: /{productID}/images/{imageID}
+		if len(parts) >= 3 && parts[1] == "images" {
+			productID, err := strconv.Atoi(parts[0])
+			if err != nil {
+				http.Error(w, "Invalid product ID", http.StatusBadRequest)
+				return
+			}
+			imageID, err := strconv.Atoi(parts[2])
+			if err != nil {
+				http.Error(w, "Invalid image ID", http.StatusBadRequest)
+				return
+			}
+
+			if r.Method == http.MethodDelete {
+				// Get image to find file path
+				images, err := products.GetProductImages(productID)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				var imageURL string
+				for _, img := range images {
+					if img.ID == imageID {
+						imageURL = img.ImageURL
+						break
+					}
+				}
+
+				// Delete from database
+				if err := products.DeleteProductImage(imageID); err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				// Delete file from filesystem if it's in uploads folder
+				if strings.Contains(imageURL, "/uploads/") {
+					filePath := filepath.Join("web/static", strings.TrimPrefix(imageURL, "/static/"))
+					os.Remove(filePath)
+				}
+
+				// Return empty response for HTMX
+				if r.Header.Get("HX-Request") == "true" {
+					w.WriteHeader(http.StatusOK)
+				} else {
+					w.Header().Set("Content-Type", "application/json")
+					json.NewEncoder(w).Encode(map[string]string{"message": "Image deleted successfully"})
+				}
+				return
+			}
+		}
+
+		// Regular product ID parsing
 		id, err := strconv.Atoi(path)
 		if err != nil {
 			http.Error(w, "Invalid product ID", http.StatusBadRequest)
@@ -1592,6 +1661,7 @@ func main() {
 		case http.MethodPut:
 			// Parse multipart form
 			if err := r.ParseMultipartForm(maxUploadSize); err != nil {
+				fmt.Printf("\n%v\n", err.Error())
 				http.Error(w, "File too large or invalid form data", http.StatusBadRequest)
 				return
 			}
@@ -1636,6 +1706,24 @@ func main() {
 			// Update product
 			if err := products.UpdateProduct(id, name, price, category, description, sku, isAvailable, brandIDs, fitsProductIDs); err != nil {
 				// Return error message for HTMX
+				if r.Header.Get("HX-Request") == "true" {
+					tmpl, _ := template.ParseFiles("web/templates/admin-error-message.html")
+					tmpl.Execute(w, err.Error())
+				} else {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
+				return
+			}
+
+			// Get product ID for images
+			product, err := products.GetProductByID(id)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			// Handle multiple image uploads
+			if err := handleMultipleImageUploads(r, "images", product.ProductID); err != nil {
 				if r.Header.Get("HX-Request") == "true" {
 					tmpl, _ := template.ParseFiles("web/templates/admin-error-message.html")
 					tmpl.Execute(w, err.Error())
@@ -1759,6 +1847,13 @@ func main() {
 				filteredOptions = append(filteredOptions, option)
 			}
 
+			// Get product images
+			productImages, err := products.GetProductImages(product.ProductID)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
 			tmpl, err := template.ParseFiles("web/templates/admin-edit-form.html")
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -1767,6 +1862,7 @@ func main() {
 
 			editData := adminEditData{
 				Product:         product,
+				ProductImages:   productImages,
 				Brands:          brands,
 				Products:        filteredOptions,
 				BrandSelections: buildIDSet(product.BrandIDs),
@@ -1830,6 +1926,76 @@ func handleImageUpload(r *http.Request, fieldName string) (string, error) {
 
 	// Return the web-accessible path
 	return "/static/images/uploads/" + filename, nil
+}
+
+func handleMultipleImageUploads(r *http.Request, fieldName string, productID int) error {
+	// Parse multipart form if not already parsed
+	if r.MultipartForm == nil {
+		if err := r.ParseMultipartForm(maxUploadSize); err != nil {
+			return fmt.Errorf("failed to parse form: %v", err)
+		}
+	}
+
+	// Get the files
+	files := r.MultipartForm.File[fieldName]
+	if len(files) == 0 {
+		return nil // No images to upload
+	}
+
+	// Process each uploaded file
+	for i, fileHeader := range files {
+		file, err := fileHeader.Open()
+		if err != nil {
+			return fmt.Errorf("failed to open file %s: %v", fileHeader.Filename, err)
+		}
+		defer file.Close()
+
+		// Validate file size
+		if fileHeader.Size > maxUploadSize {
+			return fmt.Errorf("file %s exceeds maximum allowed size of 5MB", fileHeader.Filename)
+		}
+
+		// Validate file type
+		contentType := fileHeader.Header.Get("Content-Type")
+		if !strings.HasPrefix(contentType, "image/") {
+			return fmt.Errorf("file %s must be an image", fileHeader.Filename)
+		}
+
+		// Generate unique filename
+		ext := filepath.Ext(fileHeader.Filename)
+		randomBytes := make([]byte, 16)
+		if _, err := rand.Read(randomBytes); err != nil {
+			return fmt.Errorf("failed to generate random filename: %v", err)
+		}
+		filename := hex.EncodeToString(randomBytes) + ext
+
+		// Create file path
+		filePath := filepath.Join(uploadPath, filename)
+
+		// Create destination file
+		dst, err := os.Create(filePath)
+		if err != nil {
+			return fmt.Errorf("failed to create file: %v", err)
+		}
+		defer dst.Close()
+
+		// Copy uploaded file to destination
+		if _, err := io.Copy(dst, file); err != nil {
+			os.Remove(filePath)
+			return fmt.Errorf("failed to save file: %v", err)
+		}
+
+		imagePath := "/static/images/uploads/" + filename
+		isPrimary := i == 0 // First image is primary
+
+		_, err = products.CreateProductImage(productID, imagePath, i, isPrimary)
+		if err != nil {
+			os.Remove(filePath)
+			return fmt.Errorf("failed to save image to database: %v", err)
+		}
+	}
+
+	return nil
 }
 
 func parseIDList(values []string) ([]int, error) {

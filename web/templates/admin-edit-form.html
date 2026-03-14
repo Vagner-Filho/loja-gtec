@@ -2,7 +2,8 @@
       hx-put="/api/admin/products/{{.Product.ID}}"
       hx-target='[data-product-id="{{.Product.ID}}"]'
       hx-swap="outerHTML"
-      hx-indicator="#edit-loading">
+      hx-indicator="#edit-loading"
+      enctype="multipart/form-data">
   <input type="hidden" name="id" value="{{.Product.ID}}">
 
   <div>
@@ -105,6 +106,46 @@
       {{if .Product.IsAvailable}}checked{{end}}
     />
     <label for="edit-is_available" class="ml-2 text-sm font-medium text-gray-700">Produto em Estoque</label>
+  </div>
+
+  {{if .ProductImages}}
+  <div class="md:col-span-2">
+    <label class="block text-sm font-medium text-gray-700 mb-2">Imagens Atuais</label>
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+      {{range .ProductImages}}
+      <div class="relative group">
+        <img src="{{.ImageURL}}" alt="Product image" class="w-full h-32 object-contain border border-gray-300 rounded">
+        <button
+          type="button"
+          hx-delete="/api/admin/products/{{$.Product.ProductID}}/images/{{.ID}}"
+          hx-target="closest div"
+          hx-swap="outerHTML"
+          class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        {{if .IsPrimary}}
+        <span class="absolute bottom-1 left-1 bg-blue-500 text-white text-xs px-2 py-1 rounded">Principal</span>
+        {{end}}
+      </div>
+      {{end}}
+    </div>
+  </div>
+  {{end}}
+
+  <div class="md:col-span-2">
+    <label for="edit-images" class="block text-sm font-medium text-gray-700 mb-2">Adicionar Novas Imagens</label>
+    <input
+      type="file"
+      id="edit-images"
+      name="images"
+      multiple
+      accept="image/*"
+      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+    >
+    <p class="text-xs text-gray-500 mt-1">Selecione múltiplas imagens (PNG, JPG, WEBP)</p>
   </div>
 
   <div class="md:col-span-2 flex items-center gap-4">
