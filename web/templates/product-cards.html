@@ -2,7 +2,7 @@
 <a href="/produto/{{ .ID }}" class="product-card-enhanced water-card block overflow-hidden {{if not .IsAvailable}}opacity-60{{end}}" style="text-decoration: none; color: inherit;">
   <div class="relative">
     <div class="aspect-square overflow-hidden bg-gray-50">
-      <img src="{{.Image}}" alt="{{.Name}}" class="w-full h-full object-contain p-4 transition-transform duration-300 hover:scale-105">
+      <img src="{{.Image}}" alt="Imagem do produto {{.Name}}" title="{{.Name}}" class="w-full h-full object-contain p-4 transition-transform duration-300 hover:scale-105">
     </div>
     {{if and .IsOnOffer (gt .OfferPrice 0.0)}}
       <span class="absolute top-3 right-3 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
@@ -10,18 +10,18 @@
       </span>
     {{end}}
   </div>
-  <div class="p-4 sm:p-5">
-    <h3 class="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 leading-snug">{{.Name}}</h3>
-    
+  <div class="p-4 sm:p-5 space-y-3">
+    <h3 class="text-lg font-semibold text-gray-900 mb-2 truncate leading-snug" title="{{.Name}}">{{.Name}}</h3>
+
     {{if and .IsOnOffer (gt .OfferPrice 0.0)}}
-      <div class="mb-3">
+      <div class="flex items-center gap-2">
         <p class="text-gray-400 line-through text-sm">R$ {{printf "%.2f" .Price}}</p>
         <p class="text-red-600 font-bold text-xl">R$ {{printf "%.2f" .OfferPrice}}</p>
       </div>
     {{else}}
-      <p class="text-gray-900 font-bold text-xl mb-3">R$ {{printf "%.2f" .Price}}</p>
+      <p class="text-gray-900 font-bold text-xl">R$ {{printf "%.2f" .Price}}</p>
     {{end}}
-    
+
     <div class="flex items-center justify-between gap-2">
       {{if .IsAvailable}}
         <span class="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded-full">
@@ -39,14 +39,14 @@
         </span>
       {{end}}
     </div>
-    
+
     {{if .IsAvailable}}
-      <button class="mt-4 w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2.5 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 text-sm font-medium add-to-cart flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
-              data-id="{{ .ID }}" 
-              data-name="{{.Name}}" 
-              data-price="{{if eq .IsOnOffer (gt .OfferPrice 0.0)}}{{.OfferPrice}}{{else}}{{.Price}}{{end}}"
+      <button class="w-full bg-gradient-to-r from-teal-600 to-teal-700 text-white px-4 py-2.5 rounded-lg hover:from-teal-700 hover:to-teal-800 transition-all duration-200 text-sm font-medium add-to-cart flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+              data-id="{{ .ID }}"
+              data-name="{{.Name}}"
+              data-price="{{if and .IsOnOffer (gt .OfferPrice 0.0)}}{{.OfferPrice}}{{else}}{{.Price}}{{end}}"
               onclick="event.preventDefault(); event.stopPropagation();">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
         Adicionar
@@ -78,7 +78,7 @@
         Adicionado!
       `;
       button.classList.add('from-green-600', 'to-green-700');
-      button.classList.remove('from-blue-600', 'to-blue-700');
+      button.classList.remove('from-teal-600', 'to-teal-700');
       
       setTimeout(() => {
         button.innerHTML = `
@@ -88,7 +88,7 @@
           Adicionar
         `;
         button.classList.remove('from-green-600', 'to-green-700');
-        button.classList.add('from-blue-600', 'to-blue-700');
+        button.classList.add('from-teal-600', 'to-teal-700');
       }, 1500);
     });
   });

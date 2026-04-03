@@ -28,12 +28,12 @@ html {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Subtle water-inspired card */
+/* Subtle water-inspired card - teal accent for product theme */
 .water-card {
   background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
   box-shadow: 
     0 1px 3px rgba(0, 0, 0, 0.05),
-    0 4px 12px rgba(37, 99, 235, 0.06);
+    0 4px 12px rgba(13, 148, 136, 0.08);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -41,7 +41,7 @@ html {
   transform: translateY(-3px);
   box-shadow: 
     0 4px 6px rgba(0, 0, 0, 0.05),
-    0 12px 24px rgba(37, 99, 235, 0.1);
+    0 12px 24px rgba(13, 148, 136, 0.12);
 }
 
 /* Header sticky styles */
@@ -79,7 +79,7 @@ html {
 }
 
 .status-processing {
-  @apply bg-blue-100 text-blue-700;
+  @apply bg-teal-100 text-teal-700;
 }
 
 .status-shipped {
@@ -108,7 +108,7 @@ button {
 }
 
 .search-result-row {
-  @apply flex items-center gap-3 px-4 py-3 hover:bg-blue-50 cursor-pointer transition-colors duration-150 border-b border-gray-100 last:border-b-0;
+  @apply flex items-center gap-3 px-4 py-3 hover:bg-teal-50 cursor-pointer transition-colors duration-150 border-b border-gray-100 last:border-b-0;
 }
 
 .search-result-image {
@@ -153,14 +153,14 @@ button {
 }
 
 .filter-pill:hover {
-  @apply border-blue-200;
-  background: rgba(219, 234, 254, 0.5);
+  @apply border-teal-200;
+  background: rgba(204, 251, 241, 0.5);
 }
 
 .filter-pill.active {
-  @apply text-white border-blue-600;
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+  @apply text-white border-teal-600;
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.3);
 }
 
 /* Brand filter buttons */
@@ -171,13 +171,13 @@ button {
 }
 
 .brand-pill:hover {
-  background: rgba(219, 234, 254, 0.6);
-  border-color: rgba(191, 219, 254, 0.8);
+  background: rgba(204, 251, 241, 0.6);
+  border-color: rgba(167, 243, 208, 0.8);
 }
 
 .brand-pill.active {
-  @apply text-white border-blue-500;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  @apply text-white border-teal-500;
+  background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
 }
 
 /* Product card enhancements */
@@ -193,7 +193,7 @@ button {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(180deg, transparent 60%, rgba(37, 99, 235, 0.03) 100%);
+  background: linear-gradient(180deg, transparent 60%, rgba(13, 148, 136, 0.04) 100%);
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -226,7 +226,7 @@ button {
   animation: shimmer 1.5s infinite;
 }
 
-/* Focus visible styles for accessibility */
+/* Focus visible styles for accessibility - teal for actions */
 *:focus-visible {
-  @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+  @apply outline-none ring-2 ring-teal-500 ring-offset-2;
 }

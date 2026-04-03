@@ -162,3 +162,15 @@ CREATE INDEX idx_items_name_trgm ON items USING gin(name gin_trgm_ops);
 
 -- Add GIN index for fuzzy search performance on brands.name
 CREATE INDEX idx_brands_name_trgm ON brands USING gin(name gin_trgm_ops);
+
+CREATE TABLE error_logs (
+    id SERIAL PRIMARY KEY,
+    source TEXT NOT NULL,
+    error_type TEXT NOT NULL,
+    message TEXT NOT NULL,
+    details JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_error_logs_source ON error_logs(source);
+CREATE INDEX idx_error_logs_created_at ON error_logs(created_at DESC);

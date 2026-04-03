@@ -1,6 +1,7 @@
 package checkout
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"lojagtec/internal/logging"
 	"lojagtec/internal/orders"
 
 	"github.com/stripe/stripe-go/v84"
@@ -20,6 +22,12 @@ import (
 )
 
 var ErrStripeNotConfigured = errors.New("stripe_not_configured")
+
+var db *sql.DB
+
+func SetDatabase(database *sql.DB) {
+	db = database
+}
 
 type ValidationError struct {
 	Field   string
@@ -71,10 +79,17 @@ func CreateCheckoutSession(form orders.CheckoutForm, order *orders.Order) (strin
 
 	stripeSession, err := checkoutsession.New(params)
 	if err != nil {
+		logging.LogError("stripe", "checkout_session_create", err.Error(), map[string]interface{}{
+			"order_id": order.ID,
+		})
 		return "", err
 	}
 
 	if err := orders.UpdateOrderStripePaymentID(order.ID, stripeSession.ID); err != nil {
+		logging.LogError("stripe", "update_stripe_payment_id", err.Error(), map[string]interface{}{
+			"order_id":          order.ID,
+			"stripe_session_id": stripeSession.ID,
+		})
 		return "", err
 	}
 
@@ -96,6 +111,7 @@ func HandleStripeWebhook(w http.ResponseWriter, r *http.Request) {
 	payload, err := io.ReadAll(r.Body)
 	if err != nil {
 		fmt.Printf("read payload: %v", err.Error())
+		logging.LogError("stripe", "webhook_read_payload", err.Error(), nil)
 		http.Error(w, "Failed to read payload", http.StatusBadRequest)
 		return
 	}
@@ -105,6 +121,9 @@ func HandleStripeWebhook(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Printf("sigHeader: %v", sigHeader)
 		fmt.Printf("signature: %v", err.Error())
+		logging.LogError("stripe", "webhook_signature_invalid", err.Error(), map[string]interface{}{
+			"sig_header": sigHeader,
+		})
 		http.Error(w, "Invalid signature", http.StatusBadRequest)
 		return
 	}
@@ -114,6 +133,7 @@ func HandleStripeWebhook(w http.ResponseWriter, r *http.Request) {
 		var session stripe.CheckoutSession
 		if err := json.Unmarshal(event.Data.Raw, &session); err != nil {
 			fmt.Printf("payload unmarshal: %v", err.Error())
+			logging.LogError("stripe", "webhook_unmarshal", err.Error(), nil)
 			http.Error(w, "Invalid payload", http.StatusBadRequest)
 			return
 		}
@@ -121,6 +141,10 @@ func HandleStripeWebhook(w http.ResponseWriter, r *http.Request) {
 		orderIDText := strings.TrimSpace(session.Metadata["order_id"])
 		if orderIDText == "" {
 			fmt.Printf("\nmetadata: %+v", session.Metadata)
+			logging.LogError("stripe", "webhook_missing_order_id", "Missing order_id in session metadata", map[string]interface{}{
+				"metadata": session.Metadata,
+				"event_id": event.ID,
+			})
 			http.Error(w, "Missing order metadata", http.StatusBadRequest)
 			return
 		}
@@ -129,6 +153,11 @@ func HandleStripeWebhook(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			fmt.Printf("\nmetadata: %+v", session.Metadata)
 			fmt.Printf("\nmetadata err: %v", err.Error())
+			logging.LogError("stripe", "webhook_invalid_order_id", err.Error(), map[string]interface{}{
+				"order_id_text": orderIDText,
+				"metadata":      session.Metadata,
+				"event_id":      event.ID,
+			})
 			http.Error(w, "Invalid order metadata", http.StatusBadRequest)
 			return
 		}
@@ -142,10 +171,20 @@ func HandleStripeWebhook(w http.ResponseWriter, r *http.Request) {
 		case "checkout.session.completed", "checkout.session.async_payment_succeeded":
 			if err := orders.UpdateOrderPaymentStatus(orderID, "paid", stripePaymentID); err != nil {
 				log.Printf("Failed to update payment status: %v", err)
+				logging.LogError("stripe", "webhook_update_payment_status", err.Error(), map[string]interface{}{
+					"order_id":          orderID,
+					"stripe_payment_id": stripePaymentID,
+					"new_status":        "paid",
+				})
 			}
 		case "checkout.session.async_payment_failed":
 			if err := orders.UpdateOrderPaymentStatus(orderID, "failed", stripePaymentID); err != nil {
 				log.Printf("Failed to update payment status: %v", err)
+				logging.LogError("stripe", "webhook_update_payment_status", err.Error(), map[string]interface{}{
+					"order_id":          orderID,
+					"stripe_payment_id": stripePaymentID,
+					"new_status":        "failed",
+				})
 			}
 		}
 

@@ -21,6 +21,7 @@ import (
 	"lojagtec/internal/banners"
 	"lojagtec/internal/checkout"
 	"lojagtec/internal/database"
+	"lojagtec/internal/logging"
 	"lojagtec/internal/offers"
 	"lojagtec/internal/orders"
 	"lojagtec/internal/products"
@@ -165,6 +166,8 @@ func main() {
 	orders.SetDatabase(db)
 	banners.SetDatabase(db)
 	offers.SetDatabase(db)
+	checkout.SetDatabase(db)
+	logging.SetDatabase(db)
 
 	// Apply database schema
 	if err := database.RunSchema(db); err != nil {
@@ -203,7 +206,7 @@ func main() {
 
 	// Public routes
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		tmpl, err := template.ParseFiles("web/templates/index.html")
+		tmpl, err := template.ParseFiles("web/templates/index.html", "web/templates/footer.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -213,7 +216,7 @@ func main() {
 	})
 
 	http.HandleFunc("/checkout", func(w http.ResponseWriter, r *http.Request) {
-		tmpl, err := template.ParseFiles("web/templates/checkout.html")
+		tmpl, err := template.ParseFiles("web/templates/checkout.html", "web/templates/footer.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -235,7 +238,7 @@ func main() {
 			return
 		}
 
-		tmpl, err := template.ParseFiles("web/templates/checkout-success-page.html")
+		tmpl, err := template.ParseFiles("web/templates/checkout-success-page.html", "web/templates/footer.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -259,7 +262,7 @@ func main() {
 			return
 		}
 
-		tmpl, err := template.ParseFiles("web/templates/checkout-cancel-page.html")
+		tmpl, err := template.ParseFiles("web/templates/checkout-cancel-page.html", "web/templates/footer.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -348,6 +351,7 @@ func main() {
 
 		stripeSessionURL, err := checkout.CreateCheckoutSession(form, order)
 		if err != nil {
+			logging.LogError("stripe", "checkout_session_create", err.Error(), order)
 			var validationErr checkout.ValidationError
 			if errors.Is(err, checkout.ErrStripeNotConfigured) {
 				tmpl, parseErr := template.ParseFiles("web/templates/validation-error.html")
@@ -369,6 +373,9 @@ func main() {
 			}
 
 			log.Printf("Failed to create Stripe session: %v", err)
+			logging.LogError("stripe", "checkout_session_create", err.Error(), map[string]interface{}{
+				"order_id": order.ID,
+			})
 			tmpl, parseErr := template.ParseFiles("web/templates/validation-error.html")
 			if parseErr != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -646,7 +653,7 @@ func main() {
 		// Rule 1: Block unavailable products
 		if !product.IsAvailable {
 			// Return 404 page
-			tmpl, err := template.ParseFiles("web/templates/404.html")
+			tmpl, err := template.ParseFiles("web/templates/404.html", "web/templates/footer.html")
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -685,7 +692,7 @@ func main() {
 			"sub": func(a, b float64) float64 {
 				return a - b
 			},
-		}).ParseFiles("web/templates/product.html")
+		}).ParseFiles("web/templates/product.html", "web/templates/footer.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
