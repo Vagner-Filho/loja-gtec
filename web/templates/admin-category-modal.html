@@ -1,0 +1,71 @@
+<dialog id="category-modal" class="m-auto bg-transparent backdrop:bg-black/50" hx-on="closeCategoryModal: this.close(); this.remove()">
+  <div class="bg-white rounded-lg shadow-2xl max-w-md w-full mx-auto my-20 p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-xl font-bold text-gray-800">{{if .Category}}Editar Categoria{{else}}Adicionar Categoria{{end}}</h3>
+      <button type="button" onclick="document.getElementById('category-modal').close(); document.getElementById('category-modal').remove();" class="text-gray-500 hover:text-gray-700">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    {{if .Error}}
+      <div class="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{{.Error}}</div>
+    {{end}}
+
+    <form id="add-category-form" class="grid grid-cols-1 gap-4"
+      {{if .Category}}
+        hx-put="/api/admin/categories/{{.Category.ID}}"
+      {{else}}
+        hx-post="/api/admin/categories"
+      {{end}}
+    >
+      <div>
+        <label for="category-name" class="block text-sm font-medium text-gray-700 mb-2">Nome da Categoria</label>
+        <input
+          type="text"
+          id="category-name"
+          name="name"
+          value="{{if .Category}}{{.Category.Name}}{{end}}"
+          required
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+          placeholder="e.g., Bebedouros"
+        >
+      </div>
+
+      <div class="flex items-center gap-2 flex-wrap">
+        <input
+          type="checkbox"
+          id="allows_compatibility"
+          name="allows_compatibility"
+          class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+          {{if .Category}}{{if .Category.AllowsCompatibility}}checked{{end}}{{end}}
+        />
+        <label for="allows_compatibility" class="text-sm font-medium text-gray-700">Permite compatibilidade</label>
+        <small class="w-full">Ex: Refis ou Retentores podem ser usados e associados a diversos tipos de produtos, como Bebedouros</small>
+      </div>
+
+      {{if .Category}}
+      <div class="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id="is_active"
+          name="is_active"
+          class="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
+          {{if .Category.IsActive}}checked{{end}}
+        />
+        <label for="is_active" class="text-sm font-medium text-gray-700">Ativo</label>
+      </div>
+      {{end}}
+
+      <div class="flex items-center justify-between gap-4">
+        <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold shadow-md hover:shadow-lg">
+          Salvar
+        </button>
+        <button type="button" onclick="document.getElementById('category-modal').close(); document.getElementById('category-modal').remove();" class="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 transition-colors font-semibold">
+          Cancelar
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

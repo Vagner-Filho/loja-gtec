@@ -1,3 +1,9 @@
+INSERT INTO categories (name, slug, allows_compatibility, is_active) VALUES
+    ('Purificadores', 'purificadores', FALSE, TRUE),
+    ('Bebedouros', 'bebedouros', FALSE, TRUE),
+    ('Peças', 'pecas', TRUE, TRUE),
+    ('Refis', 'refis', TRUE, TRUE);
+
 INSERT INTO items (name, price, is_available) VALUES
     ('Serviço de Instalação', 120.00, TRUE),
     ('Purificador IBBL Mio Branco', 699.99, TRUE),
@@ -5,11 +11,11 @@ INSERT INTO items (name, price, is_available) VALUES
     ('Válvula Redutora de Pressão 1/4', 45.99, TRUE),
     ('Refil Gioviale Rpc-01 Lorenzetti', 89.99, TRUE);
 
-INSERT INTO products (category, item_id, description, sku) VALUES
-    ('purificadores', 2, 'Purificador de água IBBL Mio Branco 127V', 'IBB-MIO-BRC-127'),
-    ('bebedouros', 3, 'Bebedouro IBBL Compact', 'IBB-COMP-001'),
-    ('pecas', 4, 'Válvula Redutora de Pressão 1/4', 'VRP-14-001'),
-    ('refis', 5, 'Refil Gioviale RPC-01 Lorenzetti', 'LOR-RPC-01');
+INSERT INTO products (category_id, item_id, description, sku) VALUES
+    (1, 2, 'Purificador de água IBBL Mio Branco 127V', 'IBB-MIO-BRC-127'),
+    (2, 3, 'Bebedouro IBBL Compact', 'IBB-COMP-001'),
+    (3, 4, 'Válvula Redutora de Pressão 1/4', 'VRP-14-001'),
+    (4, 5, 'Refil Gioviale RPC-01 Lorenzetti', 'LOR-RPC-01');
 
 INSERT INTO services (description, item_id) VALUES
     ('Instalação profissional, certificada e de garantia para produtos comprados na loja.', 1);
@@ -17,6 +23,11 @@ INSERT INTO services (description, item_id) VALUES
 INSERT INTO brands (name) VALUES
     ('IBBL'),
     ('Lorenzetti');
+
+INSERT INTO product_brands (product_id, brand_id) VALUES
+    (1, 1),
+    (2, 1),
+    (4, 2);
 
 INSERT INTO product_dimensions (product_id, weight, length, width, height) VALUES
     (1, 2.500, 30.00, 20.00, 40.00),
@@ -52,5 +63,3 @@ INSERT INTO offers (product_id, offer_price, start_date, end_date, is_active) VA
 
 INSERT INTO banners (image_path, title, link_url, display_order, is_active) VALUES
     ('/static/images/banner-oferta-purificador.jpg', 'Oferta especial: Purificador IBBL Mio', '/?category=purificadores', 1, TRUE);
-
-CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);

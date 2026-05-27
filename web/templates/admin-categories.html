@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Categorias - Loja G-TEC</title>
+    <link href="/static/images/favicon.png" type="image/x-icon" rel="icon">
+    <link href="/static/css/dist/style.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js" integrity="sha384-/TgkGk7p307TH7EXJDuUlgG3Ce1UVolAOFopFekQkkXihi5u/6OCvVKyz1W+idaz" crossorigin="anonymous"></script>
+  </head>
+  <body class="bg-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-blue-700 shadow-md text-white">
+      <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+        <h1 class="text-2xl font-bold">Gerenciar Categorias - G-TEC</h1>
+        <nav class="flex items-center gap-4">
+          <a href="/admin" class="px-4 hover:text-blue-200 transition-colors">Dashboard</a>
+          <a href="/admin/banners" class="px-4 hover:text-blue-200 transition-colors">Banners</a>
+          <a href="/admin/offers" class="px-4 hover:text-blue-200 transition-colors">Ofertas</a>
+          <a href="/" class="px-4 hover:text-blue-200 transition-colors">Ver Loja</a>
+          <a href="/admin/logout" class="px-4 py-2 bg-red-500 hover:bg-red-600 rounded transition-colors">Logout</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+      <!-- Add Category Section -->
+      <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-bold text-gray-800">Categorias</h2>
+          <button
+            type="button"
+            hx-get="/admin/categories/new"
+            hx-target="body"
+            hx-swap="beforeend"
+            class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-semibold shadow-md hover:shadow-lg"
+          >
+            Adicionar Categoria
+          </button>
+        </div>
+
+        <p class="text-sm text-gray-600 mb-4">
+          Categorias inativas não aparecem no filtro da loja, mas produtos existentes nela continuam visíveis.
+        </p>
+
+        <div id="categories-list"
+          class="space-y-4"
+          hx-get="/api/admin/categories"
+          hx-trigger="load, refreshCategories from:body"
+          hx-indicator="#categories-loading">
+          <!-- Categories will be loaded here -->
+        </div>
+
+        <div id="categories-loading" class="hidden htmx-indicator text-center py-4">
+          <div class="flex items-center justify-center gap-2">
+            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+            <span class="text-blue-600">Carregando categorias...</span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="/static/js/admin.js"></script>
+  </body>
+</html>

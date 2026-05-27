@@ -10,21 +10,25 @@ import (
 )
 
 type Product struct {
-	ID             int        `json:"id"`
-	ProductID      int        `json:"productId"`
-	Name           string     `json:"name"`
-	Price          float64    `json:"price"`
-	Image          string     `json:"image"`
-	Category       string     `json:"category"`
-	Description    string     `json:"description,omitempty"`
-	SKU            string     `json:"sku,omitempty"`
-	IsAvailable    bool       `json:"isAvailable"`
-	IsOnOffer      bool       `json:"isOnOffer"`
-	OfferPrice     float64    `json:"offerPrice,omitempty"`
-	OfferStartDate *time.Time `json:"offerStartDate,omitempty"`
-	OfferEndDate   *time.Time `json:"offerEndDate,omitempty"`
-	BrandIDs       []int      `json:"brandIds,omitempty"`
-	FitsProductIDs []int      `json:"fitsProductIds,omitempty"`
+	ID                  int        `json:"id"`
+	ProductID           int        `json:"productId"`
+	Name                string     `json:"name"`
+	Price               float64    `json:"price"`
+	Image               string     `json:"image"`
+	CategoryID          int        `json:"categoryId"`
+	Category            string     `json:"category"`
+	CategoryName        string     `json:"categoryName"`
+	AllowsCompatibility bool       `json:"allowsCompatibility"`
+	Description         string     `json:"description,omitempty"`
+	SKU                 string     `json:"sku,omitempty"`
+	IsAvailable         bool       `json:"isAvailable"`
+	IsOnOffer           bool       `json:"isOnOffer"`
+	OfferPrice          float64    `json:"offerPrice,omitempty"`
+	OfferStartDate      *time.Time `json:"offerStartDate,omitempty"`
+	OfferEndDate        *time.Time `json:"offerEndDate,omitempty"`
+	BrandIDs            []int      `json:"brandIds,omitempty"`
+	FitsProductIDs      []int      `json:"fitsProductIds,omitempty"`
+	PartProductIDs      []int      `json:"partProductIds,omitempty"`
 }
 
 type ProductImage struct {
@@ -57,9 +61,18 @@ type Brand struct {
 	Name string `json:"name"`
 }
 
+type Category struct {
+	ID                  int    `json:"id"`
+	Name                string `json:"name"`
+	Slug                string `json:"slug"`
+	AllowsCompatibility bool   `json:"allowsCompatibility"`
+	IsActive            bool   `json:"isActive"`
+}
+
 type ProductOption struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
+	ID                  int    `json:"id"`
+	Name                string `json:"name"`
+	AllowsCompatibility bool   `json:"allowsCompatibility"`
 }
 
 var db *sql.DB
@@ -77,7 +90,7 @@ func scanProduct(rows *sql.Rows) (Product, error) {
 	var startDate, endDate sql.NullTime
 	var isActive sql.NullBool
 
-	err := rows.Scan(&p.ID, &p.ProductID, &p.Name, &p.Price, &p.Image, &p.Category, &p.Description, &p.SKU, &p.IsAvailable,
+	err := rows.Scan(&p.ID, &p.ProductID, &p.Name, &p.Price, &p.Image, &p.CategoryID, &p.Category, &p.CategoryName, &p.AllowsCompatibility, &p.Description, &p.SKU, &p.IsAvailable,
 		&offerID, &offerPrice, &startDate, &endDate, &isActive)
 	if err != nil {
 		return p, err
@@ -124,7 +137,7 @@ func scanSearchProduct(rows *sql.Rows) (Product, error) {
 	var isActive sql.NullBool
 	var similarityScore float64 // Ignored, just for ORDER BY
 
-	err := rows.Scan(&p.ID, &p.ProductID, &p.Name, &p.Price, &p.Image, &p.Category, &p.Description, &p.SKU, &p.IsAvailable,
+	err := rows.Scan(&p.ID, &p.ProductID, &p.Name, &p.Price, &p.Image, &p.CategoryID, &p.Category, &p.CategoryName, &p.AllowsCompatibility, &p.Description, &p.SKU, &p.IsAvailable,
 		&offerID, &offerPrice, &startDate, &endDate, &isActive, &similarityScore)
 	if err != nil {
 		return p, err
@@ -164,10 +177,11 @@ func scanSearchProduct(rows *sql.Rows) (Product, error) {
 
 // GetAllProducts retrieves all products from the database
 func GetAllProducts() ([]Product, error) {
-	query := `SELECT items.id, products.id, items.name, items.price, COALESCE(pi.image_url, ''), products.category, 
+	query := `SELECT items.id, products.id, items.name, items.price, COALESCE(pi.image_url, ''), products.category_id, c.slug, c.name, c.allows_compatibility,
 		products.description, products.sku, items.is_available, o.id, o.offer_price, o.start_date, o.end_date, o.is_active
-		FROM products 
-		JOIN items ON products.item_id = items.id 
+		FROM products
+		JOIN items ON products.item_id = items.id
+		JOIN categories c ON products.category_id = c.id
 		LEFT JOIN offers o ON products.id = o.product_id AND o.is_active = TRUE
 		LEFT JOIN product_images pi ON products.id = pi.product_id AND pi.is_primary = TRUE
 		ORDER BY items.id DESC`
@@ -191,23 +205,24 @@ func GetAllProducts() ([]Product, error) {
 }
 
 // GetProductsByCategory retrieves products by category from the database
-func GetProductsByCategory(category string) ([]Product, error) {
-	return GetProductsByCategoryAndBrands(category, nil)
+func GetProductsByCategory(categorySlug string) ([]Product, error) {
+	return GetProductsByCategoryAndBrands(categorySlug, nil)
 }
 
 // GetProductsByCategoryAndBrands retrieves products by category and brand filters from the database
-func GetProductsByCategoryAndBrands(category string, brandIDs []int) ([]Product, error) {
+func GetProductsByCategoryAndBrands(categorySlug string, brandIDs []int) ([]Product, error) {
 	var rows *sql.Rows
 	var err error
 
-	if category == "" && len(brandIDs) == 0 {
+	if categorySlug == "" && len(brandIDs) == 0 {
 		return GetAllProducts()
 	}
 
-	query := `SELECT DISTINCT items.id, products.id, items.name, items.price, COALESCE(pi.image_url, ''), products.category, 
+	query := `SELECT DISTINCT items.id, products.id, items.name, items.price, COALESCE(pi.image_url, ''), products.category_id, c.slug, c.name, c.allows_compatibility,
 		products.description, products.sku, items.is_available, o.id, o.offer_price, o.start_date, o.end_date, o.is_active
-		FROM products 
+		FROM products
 		JOIN items ON products.item_id = items.id
+		JOIN categories c ON products.category_id = c.id
 		LEFT JOIN offers o ON products.id = o.product_id AND o.is_active = TRUE
 		LEFT JOIN product_images pi ON products.id = pi.product_id AND pi.is_primary = TRUE`
 	var args []interface{}
@@ -219,9 +234,9 @@ func GetProductsByCategoryAndBrands(category string, brandIDs []int) ([]Product,
 		args = append(args, pq.Array(brandIDs))
 	}
 
-	if category != "" {
-		conditions = append(conditions, "products.category = $"+string(rune('0'+len(args)+1)))
-		args = append(args, category)
+	if categorySlug != "" {
+		conditions = append(conditions, "c.slug = $"+string(rune('0'+len(args)+1)))
+		args = append(args, categorySlug)
 	}
 
 	if len(conditions) > 0 {
@@ -257,17 +272,18 @@ func GetProductByID(id int) (*Product, error) {
 	var startDate, endDate sql.NullTime
 	var isActive sql.NullBool
 
-	query := `SELECT items.id, products.id, items.name, items.price, COALESCE(pi.image_url, ''), 
-		products.category, products.description, products.sku, items.is_available, o.id, o.offer_price, 
+	query := `SELECT items.id, products.id, items.name, items.price, COALESCE(pi.image_url, ''),
+		products.category_id, c.slug, c.name, c.allows_compatibility, products.description, products.sku, items.is_available, o.id, o.offer_price,
 		o.start_date, o.end_date, o.is_active
-		FROM products 
-		JOIN items ON products.item_id = items.id 
+		FROM products
+		JOIN items ON products.item_id = items.id
+		JOIN categories c ON products.category_id = c.id
 		LEFT JOIN offers o ON products.id = o.product_id AND o.is_active = TRUE
 		LEFT JOIN product_images pi ON products.id = pi.product_id AND pi.is_primary = TRUE
 		WHERE items.id = $1`
 
 	err := db.QueryRow(query, id).Scan(
-		&p.ID, &productID, &p.Name, &p.Price, &p.Image, &p.Category, &p.Description, &p.SKU, &p.IsAvailable,
+		&p.ID, &productID, &p.Name, &p.Price, &p.Image, &p.CategoryID, &p.Category, &p.CategoryName, &p.AllowsCompatibility, &p.Description, &p.SKU, &p.IsAvailable,
 		&offerID, &offerPrice, &startDate, &endDate, &isActive,
 	)
 	if err != nil {
@@ -313,9 +329,14 @@ func GetProductByID(id int) (*Product, error) {
 	if err != nil {
 		return nil, err
 	}
+	partIDs, err := getPartProductIDsByProductID(productID)
+	if err != nil {
+		return nil, err
+	}
 
 	p.BrandIDs = brandIDs
 	p.FitsProductIDs = fitIDs
+	p.PartProductIDs = partIDs
 	return &p, nil
 }
 
@@ -328,7 +349,7 @@ func GetCurrentPrice(product Product) float64 {
 }
 
 // CreateProduct creates a new product in the database
-func CreateProduct(name string, price float64, category string, description, sku string, isAvailable bool, brandIDs, fitsProductIDs []int) (*Product, error) {
+func CreateProduct(name string, price float64, categoryID int, description, sku string, isAvailable bool, brandIDs, fitsProductIDs, partProductIDs []int) (*Product, error) {
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
@@ -346,8 +367,8 @@ func CreateProduct(name string, price float64, category string, description, sku
 
 	var productID int
 	err = tx.QueryRow(
-		"INSERT INTO products (category, item_id, description, sku) VALUES ($1, $2, $3, $4) RETURNING id",
-		category, itemID, description, sku,
+		"INSERT INTO products (category_id, item_id, description, sku) VALUES ($1, $2, $3, $4) RETURNING id",
+		categoryID, itemID, description, sku,
 	).Scan(&productID)
 	if err != nil {
 		_ = tx.Rollback()
@@ -359,7 +380,12 @@ func CreateProduct(name string, price float64, category string, description, sku
 		return nil, err
 	}
 
-	if err := insertProductCompatibility(tx, productID, category, fitsProductIDs); err != nil {
+	if err := insertProductCompatibility(tx, productID, categoryID, fitsProductIDs); err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+
+	if err := insertProductParts(tx, productID, partProductIDs); err != nil {
 		_ = tx.Rollback()
 		return nil, err
 	}
@@ -373,17 +399,18 @@ func CreateProduct(name string, price float64, category string, description, sku
 		ProductID:      productID,
 		Name:           name,
 		Price:          price,
-		Category:       category,
+		CategoryID:     categoryID,
 		Description:    description,
 		SKU:            sku,
 		IsAvailable:    isAvailable,
 		BrandIDs:       uniqueIDs(brandIDs),
 		FitsProductIDs: uniqueIDs(fitsProductIDs),
+		PartProductIDs: uniqueIDs(partProductIDs),
 	}, nil
 }
 
 // UpdateProduct updates an existing product in the database
-func UpdateProduct(id int, name string, price float64, category string, description, sku string, isAvailable bool, brandIDs, fitsProductIDs []int) error {
+func UpdateProduct(id int, name string, price float64, categoryID int, description, sku string, isAvailable bool, brandIDs, fitsProductIDs, partProductIDs []int) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -410,8 +437,8 @@ func UpdateProduct(id int, name string, price float64, category string, descript
 	}
 
 	_, err = tx.Exec(
-		"UPDATE products SET category = $1, description = $2, sku = $3 WHERE item_id = $4",
-		category, description, sku, id,
+		"UPDATE products SET category_id = $1, description = $2, sku = $3 WHERE item_id = $4",
+		categoryID, description, sku, id,
 	)
 	if err != nil {
 		_ = tx.Rollback()
@@ -437,7 +464,16 @@ func UpdateProduct(id int, name string, price float64, category string, descript
 		_ = tx.Rollback()
 		return err
 	}
-	if err := insertProductCompatibility(tx, productID, category, fitsProductIDs); err != nil {
+	if err := insertProductCompatibility(tx, productID, categoryID, fitsProductIDs); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	if _, err := tx.Exec("DELETE FROM product_compatibility WHERE fits_product_id = $1", productID); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	if err := insertProductParts(tx, productID, partProductIDs); err != nil {
 		_ = tx.Rollback()
 		return err
 	}
@@ -488,7 +524,7 @@ func CreateBrand(name string) (*Brand, error) {
 }
 
 func GetAllProductOptions() ([]ProductOption, error) {
-	rows, err := db.Query("SELECT products.id, items.name FROM products JOIN items ON products.item_id = items.id ORDER BY items.name")
+	rows, err := db.Query("SELECT products.id, items.name, c.allows_compatibility FROM products JOIN items ON products.item_id = items.id JOIN categories c ON products.category_id = c.id ORDER BY items.name")
 	if err != nil {
 		return nil, err
 	}
@@ -497,7 +533,7 @@ func GetAllProductOptions() ([]ProductOption, error) {
 	var products []ProductOption
 	for rows.Next() {
 		var p ProductOption
-		if err := rows.Scan(&p.ID, &p.Name); err != nil {
+		if err := rows.Scan(&p.ID, &p.Name, &p.AllowsCompatibility); err != nil {
 			return nil, err
 		}
 		products = append(products, p)
@@ -544,6 +580,25 @@ func getFitsProductIDsByProductID(productID int) ([]int, error) {
 	return ids, nil
 }
 
+func getPartProductIDsByProductID(productID int) ([]int, error) {
+	rows, err := db.Query("SELECT part_product_id FROM product_compatibility WHERE fits_product_id = $1 ORDER BY part_product_id", productID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ids []int
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+
+	return ids, nil
+}
+
 func insertProductBrands(tx *sql.Tx, productID int, brandIDs []int) error {
 	for _, id := range uniqueIDs(brandIDs) {
 		if id == 0 {
@@ -556,13 +611,20 @@ func insertProductBrands(tx *sql.Tx, productID int, brandIDs []int) error {
 	return nil
 }
 
-func insertProductCompatibility(tx *sql.Tx, productID int, category string, fitsProductIDs []int) error {
+func insertProductCompatibility(tx *sql.Tx, productID int, categoryID int, fitsProductIDs []int) error {
 	if len(fitsProductIDs) == 0 {
 		return nil
 	}
-	if !isPartsCategory(category) {
-		return fmt.Errorf("apenas produtos das categorias refis ou pecas podem ter compatibilidade")
+
+	var allowsCompat bool
+	err := tx.QueryRow("SELECT allows_compatibility FROM categories WHERE id = $1", categoryID).Scan(&allowsCompat)
+	if err != nil {
+		return fmt.Errorf("erro ao verificar categoria: %w", err)
 	}
+	if !allowsCompat {
+		return fmt.Errorf("apenas produtos de categorias que permitem compatibilidade podem ter compatibilidade")
+	}
+
 	for _, id := range uniqueIDs(fitsProductIDs) {
 		if id == 0 {
 			continue
@@ -577,8 +639,33 @@ func insertProductCompatibility(tx *sql.Tx, productID int, category string, fits
 	return nil
 }
 
-func isPartsCategory(category string) bool {
-	return category == "refis" || category == "pecas"
+func insertProductParts(tx *sql.Tx, productID int, partProductIDs []int) error {
+	if len(partProductIDs) == 0 {
+		return nil
+	}
+
+	for _, id := range uniqueIDs(partProductIDs) {
+		if id == 0 {
+			continue
+		}
+		if id == productID {
+			return fmt.Errorf("produto nao pode ser compativel consigo mesmo")
+		}
+
+		var allowsCompat bool
+		err := tx.QueryRow("SELECT allows_compatibility FROM categories c JOIN products p ON p.category_id = c.id WHERE p.id = $1", id).Scan(&allowsCompat)
+		if err != nil {
+			return fmt.Errorf("erro ao verificar categoria do produto compativel: %w", err)
+		}
+		if !allowsCompat {
+			return fmt.Errorf("apenas produtos de categorias que permitem compatibilidade podem ser associados como peca/refil")
+		}
+
+		if _, err := tx.Exec("INSERT INTO product_compatibility (part_product_id, fits_product_id) VALUES ($1, $2)", id, productID); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func uniqueIDs(ids []int) []int {
@@ -637,10 +724,10 @@ func DeleteProduct(id int) error {
 
 // GetBrandNamesByProductID returns brand names for a product
 func GetBrandNamesByProductID(productID int) ([]Brand, error) {
-	query := `SELECT b.id, b.name 
-		FROM brands b 
-		JOIN product_brands pb ON b.id = pb.brand_id 
-		WHERE pb.product_id = $1 
+	query := `SELECT b.id, b.name
+		FROM brands b
+		JOIN product_brands pb ON b.id = pb.brand_id
+		WHERE pb.product_id = $1
 		ORDER BY b.name`
 
 	rows, err := db.Query(query, productID)
@@ -663,14 +750,46 @@ func GetBrandNamesByProductID(productID int) ([]Brand, error) {
 
 // GetCompatibleProductsByProductID returns products compatible with this part
 func GetCompatibleProductsByProductID(productID int) ([]Product, error) {
-	query := `SELECT items.id, products.id, items.name, items.price, COALESCE(pi.image_url, ''), products.category, 
+	query := `SELECT items.id, products.id, items.name, items.price, COALESCE(pi.image_url, ''), products.category_id, c.slug, c.name, c.allows_compatibility,
 		products.description, products.sku, items.is_available, o.id, o.offer_price, o.start_date, o.end_date, o.is_active
 		FROM product_compatibility pc
 		JOIN products ON pc.fits_product_id = products.id
 		JOIN items ON products.item_id = items.id
+		JOIN categories c ON products.category_id = c.id
 		LEFT JOIN offers o ON products.id = o.product_id AND o.is_active = TRUE
 		LEFT JOIN product_images pi ON products.id = pi.product_id AND pi.is_primary = TRUE
 		WHERE pc.part_product_id = $1
+		ORDER BY items.name`
+
+	rows, err := db.Query(query, productID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var products []Product
+	for rows.Next() {
+		p, err := scanProduct(rows)
+		if err != nil {
+			return nil, err
+		}
+		products = append(products, p)
+	}
+
+	return products, nil
+}
+
+// GetPartsForProduct returns parts/refills compatible with this product
+func GetPartsForProduct(productID int) ([]Product, error) {
+	query := `SELECT items.id, products.id, items.name, items.price, COALESCE(pi.image_url, ''), products.category_id, c.slug, c.name, c.allows_compatibility,
+		products.description, products.sku, items.is_available, o.id, o.offer_price, o.start_date, o.end_date, o.is_active
+		FROM product_compatibility pc
+		JOIN products ON pc.part_product_id = products.id
+		JOIN items ON products.item_id = items.id
+		JOIN categories c ON products.category_id = c.id
+		LEFT JOIN offers o ON products.id = o.product_id AND o.is_active = TRUE
+		LEFT JOIN product_images pi ON products.id = pi.product_id AND pi.is_primary = TRUE
+		WHERE pc.fits_product_id = $1
 		ORDER BY items.name`
 
 	rows, err := db.Query(query, productID)
@@ -709,14 +828,15 @@ func SearchProducts(query string, limit int) ([]Product, error) {
 	searchQuery := `%` + query + `%`
 
 	rows, err := db.Query(`
-		SELECT DISTINCT items.id, products.id, items.name, items.price, COALESCE(pi.image_url, ''), products.category, 
+		SELECT DISTINCT items.id, products.id, items.name, items.price, COALESCE(pi.image_url, ''), products.category_id, c.slug, c.name, c.allows_compatibility,
 			products.description, products.sku, items.is_available, o.id, o.offer_price, o.start_date, o.end_date, o.is_active,
 			similarity(items.name, $2) as similarity_score
-		FROM products 
-		JOIN items ON products.item_id = items.id 
+		FROM products
+		JOIN items ON products.item_id = items.id
+		JOIN categories c ON products.category_id = c.id
 		LEFT JOIN offers o ON products.id = o.product_id AND o.is_active = TRUE
 		LEFT JOIN product_images pi ON products.id = pi.product_id AND pi.is_primary = TRUE
-		WHERE items.name ILIKE $1 
+		WHERE items.name ILIKE $1
 			OR similarity(items.name, $2) > 0.3
 		ORDER BY similarity_score DESC, items.name
 		LIMIT $3`,
@@ -751,7 +871,7 @@ func SearchBrandsWithCount(query string, limit int) ([]BrandSearchResult, error)
 		SELECT b.id, b.name, COUNT(DISTINCT pb.product_id) as product_count
 		FROM brands b
 		LEFT JOIN product_brands pb ON b.id = pb.brand_id
-		WHERE b.name ILIKE $1 
+		WHERE b.name ILIKE $1
 			OR similarity(b.name, $2) > 0.3
 		GROUP BY b.id, b.name
 		ORDER BY similarity(b.name, $2) DESC, b.name
@@ -775,18 +895,19 @@ func SearchBrandsWithCount(query string, limit int) ([]BrandSearchResult, error)
 }
 
 // GetRelatedProducts returns products in the same category (excluding the given product)
-func GetRelatedProducts(excludeProductID int, category string, limit int) ([]Product, error) {
-	query := `SELECT items.id, products.id, items.name, items.price, COALESCE(pi.image_url, ''), products.category, 
+func GetRelatedProducts(excludeProductID int, categorySlug string, limit int) ([]Product, error) {
+	query := `SELECT items.id, products.id, items.name, items.price, COALESCE(pi.image_url, ''), products.category_id, c.slug, c.name, c.allows_compatibility,
 		products.description, products.sku, items.is_available, o.id, o.offer_price, o.start_date, o.end_date, o.is_active
-		FROM products 
-		JOIN items ON products.item_id = items.id 
+		FROM products
+		JOIN items ON products.item_id = items.id
+		JOIN categories c ON products.category_id = c.id
 		LEFT JOIN offers o ON products.id = o.product_id AND o.is_active = TRUE
 		LEFT JOIN product_images pi ON products.id = pi.product_id AND pi.is_primary = TRUE
-		WHERE products.category = $1 AND products.id != $2 AND items.is_available = TRUE
+		WHERE c.slug = $1 AND products.id != $2 AND items.is_available = TRUE
 		ORDER BY RANDOM()
 		LIMIT $3`
 
-	rows, err := db.Query(query, category, excludeProductID, limit)
+	rows, err := db.Query(query, categorySlug, excludeProductID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -805,7 +926,7 @@ func GetRelatedProducts(excludeProductID int, category string, limit int) ([]Pro
 }
 
 func GetProductImages(productID int) ([]ProductImage, error) {
-	query := `SELECT id, product_id, image_url, display_order, is_primary 
+	query := `SELECT id, product_id, image_url, display_order, is_primary
 		FROM product_images WHERE product_id = $1 ORDER BY display_order, id`
 
 	rows, err := db.Query(query, productID)
@@ -851,7 +972,7 @@ func CreateProductImage(productID int, imageURL string, displayOrder int, isPrim
 
 	var img ProductImage
 	err := db.QueryRow(
-		`INSERT INTO product_images (product_id, image_url, display_order, is_primary) 
+		`INSERT INTO product_images (product_id, image_url, display_order, is_primary)
 		VALUES ($1, $2, $3, $4) RETURNING id, product_id, image_url, display_order, is_primary`,
 		productID, imageURL, displayOrder, isPrimary,
 	).Scan(&img.ID, &img.ProductID, &img.ImageURL, &img.DisplayOrder, &img.IsPrimary)
@@ -897,7 +1018,7 @@ func DeleteProductDimensions(productID int) error {
 }
 
 func GetProductTechnicalSpecs(productID int) ([]ProductTechnicalSpec, error) {
-	query := `SELECT id, product_id, spec_key, spec_value, display_order 
+	query := `SELECT id, product_id, spec_key, spec_value, display_order
 		FROM product_technical_specs WHERE product_id = $1 ORDER BY display_order, id`
 
 	rows, err := db.Query(query, productID)
@@ -932,7 +1053,7 @@ func SaveProductTechnicalSpecs(productID int, specs []ProductTechnicalSpec) erro
 
 	for _, spec := range specs {
 		_, err = tx.Exec(
-			`INSERT INTO product_technical_specs (product_id, spec_key, spec_value, display_order) 
+			`INSERT INTO product_technical_specs (product_id, spec_key, spec_value, display_order)
 			VALUES ($1, $2, $3, $4)`,
 			productID, spec.SpecKey, spec.SpecValue, spec.DisplayOrder,
 		)
@@ -943,4 +1064,144 @@ func SaveProductTechnicalSpecs(productID int, specs []ProductTechnicalSpec) erro
 	}
 
 	return tx.Commit()
+}
+
+// Category functions
+
+func GetAllCategories() ([]Category, error) {
+	rows, err := db.Query("SELECT id, name, slug, allows_compatibility, is_active FROM categories ORDER BY name")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var categories []Category
+	for rows.Next() {
+		var c Category
+		if err := rows.Scan(&c.ID, &c.Name, &c.Slug, &c.AllowsCompatibility, &c.IsActive); err != nil {
+			return nil, err
+		}
+		categories = append(categories, c)
+	}
+
+	return categories, nil
+}
+
+func GetActiveCategories() ([]Category, error) {
+	rows, err := db.Query("SELECT id, name, slug, allows_compatibility, is_active FROM categories WHERE is_active = TRUE ORDER BY name")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var categories []Category
+	for rows.Next() {
+		var c Category
+		if err := rows.Scan(&c.ID, &c.Name, &c.Slug, &c.AllowsCompatibility, &c.IsActive); err != nil {
+			return nil, err
+		}
+		categories = append(categories, c)
+	}
+
+	return categories, nil
+}
+
+func GetCategoryBySlug(slug string) (*Category, error) {
+	var c Category
+	err := db.QueryRow("SELECT id, name, slug, allows_compatibility, is_active FROM categories WHERE slug = $1", slug).Scan(
+		&c.ID, &c.Name, &c.Slug, &c.AllowsCompatibility, &c.IsActive,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("categoria nao encontrada")
+		}
+		return nil, err
+	}
+	return &c, nil
+}
+
+func GetCategoryByID(id int) (*Category, error) {
+	var c Category
+	err := db.QueryRow("SELECT id, name, slug, allows_compatibility, is_active FROM categories WHERE id = $1", id).Scan(
+		&c.ID, &c.Name, &c.Slug, &c.AllowsCompatibility, &c.IsActive,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("categoria nao encontrada")
+		}
+		return nil, err
+	}
+	return &c, nil
+}
+
+func CreateCategory(name string, allowsCompatibility bool) (*Category, error) {
+	trimmed := strings.TrimSpace(name)
+	if trimmed == "" {
+		return nil, fmt.Errorf("nome da categoria nao pode ser vazio")
+	}
+
+	slug := strings.ToLower(trimmed)
+	slug = strings.ReplaceAll(slug, " ", "-")
+	slug = strings.ReplaceAll(slug, "ç", "c")
+	slug = strings.ReplaceAll(slug, "ã", "a")
+	slug = strings.ReplaceAll(slug, "õ", "o")
+	slug = strings.ReplaceAll(slug, "á", "a")
+	slug = strings.ReplaceAll(slug, "é", "e")
+	slug = strings.ReplaceAll(slug, "í", "i")
+	slug = strings.ReplaceAll(slug, "ó", "o")
+	slug = strings.ReplaceAll(slug, "ú", "u")
+	slug = strings.ReplaceAll(slug, "â", "a")
+	slug = strings.ReplaceAll(slug, "ê", "e")
+	slug = strings.ReplaceAll(slug, "ô", "o")
+	slug = strings.ReplaceAll(slug, "ñ", "n")
+
+	var c Category
+	c.Name = trimmed
+	c.Slug = slug
+	c.AllowsCompatibility = allowsCompatibility
+	c.IsActive = true
+
+	err := db.QueryRow(
+		"INSERT INTO categories (name, slug, allows_compatibility) VALUES ($1, $2, $3) RETURNING id",
+		trimmed, slug, allowsCompatibility,
+	).Scan(&c.ID)
+	if err != nil {
+		if pgErr, ok := err.(*pq.Error); ok && pgErr.Code == "23505" {
+			return nil, fmt.Errorf("categoria ja cadastrada")
+		}
+		return nil, err
+	}
+
+	return &c, nil
+}
+
+func UpdateCategory(id int, name string, allowsCompatibility bool, isActive bool) error {
+	trimmed := strings.TrimSpace(name)
+	if trimmed == "" {
+		return fmt.Errorf("nome da categoria nao pode ser vazio")
+	}
+
+	result, err := db.Exec(
+		"UPDATE categories SET name = $1, allows_compatibility = $2, is_active = $3 WHERE id = $4",
+		trimmed, allowsCompatibility, isActive, id,
+	)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("categoria nao encontrada")
+	}
+
+	return nil
+}
+
+func ToggleCategoryActive(id int) error {
+	_, err := db.Exec("UPDATE categories SET is_active = NOT is_active WHERE id = $1", id)
+	return err
 }

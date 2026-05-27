@@ -1,9 +1,12 @@
 #!/bin/bash
 
-echo "Running database migration..."
-echo "Please run the following command manually if psql is installed:"
+echo "Database migrations run automatically when the server starts."
 echo ""
-echo "  PGPASSWORD=postgres psql -U lojagtec -d lojagtec -f scripts/migrations/001_create_admin_and_products.sql"
+echo "To start the server and apply migrations:"
 echo ""
-echo "Or connect to your PostgreSQL database and run the SQL file:"
-echo "  psql -U lojagtec -d lojagtec -f scripts/migrations/001_create_admin_and_products.sql"
+echo "  go build -o lojagtec cmd/server/main.go"
+echo "  ./lojagtec"
+echo ""
+echo "To run a specific migration manually:"
+echo ""
+echo "  psql -U lojagtec -d lojagtec -f scripts/migrations/1_baseline.sql"

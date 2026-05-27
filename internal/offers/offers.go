@@ -8,15 +8,16 @@ import (
 
 // Offer represents a product that is on offer/promotion
 type Offer struct {
-	ID         int        `json:"id"`
-	ProductID  int        `json:"productId"`
-	Name       string     `json:"name"`
-	Price      float64    `json:"price"`
-	OfferPrice float64    `json:"offerPrice"`
-	Category   string     `json:"category"`
-	StartDate  *time.Time `json:"startDate,omitempty"`
-	EndDate    *time.Time `json:"endDate,omitempty"`
-	IsActive   bool       `json:"isActive"`
+	ID           int        `json:"id"`
+	ProductID    int        `json:"productId"`
+	Name         string     `json:"name"`
+	Price        float64    `json:"price"`
+	OfferPrice   float64    `json:"offerPrice"`
+	Category     string     `json:"category"`
+	CategoryName string     `json:"categoryName"`
+	StartDate    *time.Time `json:"startDate,omitempty"`
+	EndDate      *time.Time `json:"endDate,omitempty"`
+	IsActive     bool       `json:"isActive"`
 }
 
 // OfferForm represents the form data for creating/updating an offer
@@ -58,11 +59,12 @@ func IsOfferActive(offer Offer) bool {
 // GetActiveOffers retrieves all offers currently active for public display
 func GetActiveOffers() ([]Offer, error) {
 	query := `
-		SELECT o.id, o.product_id, i.name, i.price, o.offer_price, 
-		       p.category, o.start_date, o.end_date, o.is_active
+		SELECT o.id, o.product_id, i.name, i.price, o.offer_price,
+		       c.slug, c.name, o.start_date, o.end_date, o.is_active
 		FROM offers o
 		JOIN products p ON o.product_id = p.id
 		JOIN items i ON p.item_id = i.id
+		JOIN categories c ON p.category_id = c.id
 		WHERE o.is_active = TRUE
 		ORDER BY o.id DESC
 	`
@@ -79,7 +81,7 @@ func GetActiveOffers() ([]Offer, error) {
 		var o Offer
 		var startDate, endDate sql.NullTime
 		err := rows.Scan(&o.ID, &o.ProductID, &o.Name, &o.Price, &o.OfferPrice,
-			&o.Category, &startDate, &endDate, &o.IsActive)
+			&o.Category, &o.CategoryName, &startDate, &endDate, &o.IsActive)
 		if err != nil {
 			return nil, err
 		}
@@ -109,11 +111,12 @@ func GetActiveOffers() ([]Offer, error) {
 // GetAllOffers retrieves all offers including inactive ones (for admin)
 func GetAllOffers() ([]Offer, error) {
 	query := `
-		SELECT o.id, o.product_id, i.name, i.price, o.offer_price, 
-		       p.category, o.start_date, o.end_date, o.is_active
+		SELECT o.id, o.product_id, i.name, i.price, o.offer_price,
+		       c.slug, c.name, o.start_date, o.end_date, o.is_active
 		FROM offers o
 		JOIN products p ON o.product_id = p.id
 		JOIN items i ON p.item_id = i.id
+		JOIN categories c ON p.category_id = c.id
 		ORDER BY o.id DESC
 	`
 
@@ -128,7 +131,7 @@ func GetAllOffers() ([]Offer, error) {
 		var o Offer
 		var startDate, endDate sql.NullTime
 		err := rows.Scan(&o.ID, &o.ProductID, &o.Name, &o.Price, &o.OfferPrice,
-			&o.Category, &startDate, &endDate, &o.IsActive)
+			&o.Category, &o.CategoryName, &startDate, &endDate, &o.IsActive)
 		if err != nil {
 			return nil, err
 		}
@@ -149,9 +152,9 @@ func GetAllOffers() ([]Offer, error) {
 // GetProductsForOfferSelection retrieves products not currently on offer
 func GetProductsForOfferSelection() ([]ProductOption, error) {
 	query := `
-		SELECT p.id, i.name 
+		SELECT p.id, i.name
 		FROM products p
-		JOIN items i ON p.item_id = i.id 
+		JOIN items i ON p.item_id = i.id
 		WHERE NOT EXISTS (
 			SELECT 1 FROM offers o WHERE o.product_id = p.id AND o.is_active = TRUE
 		)
@@ -196,7 +199,7 @@ func CreateOffer(form OfferForm) error {
 	if err == nil {
 		// Offer exists, update it
 		_, err = db.Exec(
-			`UPDATE offers 
+			`UPDATE offers
 			 SET offer_price = $1, start_date = $2, end_date = $3, is_active = TRUE, updated_at = CURRENT_TIMESTAMP
 			 WHERE product_id = $4`,
 			form.OfferPrice, form.StartDate, form.EndDate, form.ProductID,
@@ -235,7 +238,7 @@ func UpdateOffer(offerID int, form OfferForm) error {
 	}
 
 	result, err := db.Exec(
-		`UPDATE offers 
+		`UPDATE offers
 		 SET offer_price = $1, start_date = $2, end_date = $3, updated_at = CURRENT_TIMESTAMP
 		 WHERE id = $4`,
 		form.OfferPrice, form.StartDate, form.EndDate, offerID,
@@ -259,9 +262,9 @@ func UpdateOffer(offerID int, form OfferForm) error {
 // ToggleOfferStatus toggles the active status of an offer (soft delete)
 func ToggleOfferStatus(offerID int) (bool, error) {
 	query := `
-		UPDATE offers 
+		UPDATE offers
 		SET is_active = NOT is_active, updated_at = CURRENT_TIMESTAMP
-		WHERE id = $1 
+		WHERE id = $1
 		RETURNING is_active
 	`
 
@@ -277,11 +280,12 @@ func ToggleOfferStatus(offerID int) (bool, error) {
 // GetOfferByProductID retrieves a single offer by product ID
 func GetOfferByProductID(productID int) (*Offer, error) {
 	query := `
-		SELECT o.id, o.product_id, i.name, i.price, o.offer_price, 
-		       p.category, o.start_date, o.end_date, o.is_active
+		SELECT o.id, o.product_id, i.name, i.price, o.offer_price,
+		       c.slug, c.name, o.start_date, o.end_date, o.is_active
 		FROM offers o
 		JOIN products p ON o.product_id = p.id
 		JOIN items i ON p.item_id = i.id
+		JOIN categories c ON p.category_id = c.id
 		WHERE o.product_id = $1
 	`
 
@@ -289,7 +293,7 @@ func GetOfferByProductID(productID int) (*Offer, error) {
 	var startDate, endDate sql.NullTime
 	err := db.QueryRow(query, productID).Scan(
 		&o.ID, &o.ProductID, &o.Name, &o.Price, &o.OfferPrice,
-		&o.Category, &startDate, &endDate, &o.IsActive,
+		&o.Category, &o.CategoryName, &startDate, &endDate, &o.IsActive,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -311,11 +315,12 @@ func GetOfferByProductID(productID int) (*Offer, error) {
 // GetActiveOfferByProductID retrieves an active offer for a product if one exists
 func GetActiveOfferByProductID(productID int) (*Offer, error) {
 	query := `
-		SELECT o.id, o.product_id, i.name, i.price, o.offer_price, 
-		       p.category, o.start_date, o.end_date, o.is_active
+		SELECT o.id, o.product_id, i.name, i.price, o.offer_price,
+		       c.slug, c.name, o.start_date, o.end_date, o.is_active
 		FROM offers o
 		JOIN products p ON o.product_id = p.id
 		JOIN items i ON p.item_id = i.id
+		JOIN categories c ON p.category_id = c.id
 		WHERE o.product_id = $1 AND o.is_active = TRUE
 	`
 
@@ -323,7 +328,7 @@ func GetActiveOfferByProductID(productID int) (*Offer, error) {
 	var startDate, endDate sql.NullTime
 	err := db.QueryRow(query, productID).Scan(
 		&o.ID, &o.ProductID, &o.Name, &o.Price, &o.OfferPrice,
-		&o.Category, &startDate, &endDate, &o.IsActive,
+		&o.Category, &o.CategoryName, &startDate, &endDate, &o.IsActive,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {

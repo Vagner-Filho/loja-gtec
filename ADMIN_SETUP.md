@@ -21,34 +21,33 @@ The bcrypt dependency has already been added. If you need to reinstall:
 go get golang.org/x/crypto/bcrypt
 ```
 
-### 2. Run Database Migration
+### 2. Database Setup
 
-You need to run the migration to create the necessary database tables:
-
-```bash
-PGPASSWORD=postgres psql -U lojagtec -d lojagtec -f scripts/migrations/001_create_admin_and_products.sql
-```
-
-Or if you have a different PostgreSQL setup:
+Migrations run automatically when you start the server. For a fresh database, the baseline schema and seed data are applied in development mode.
 
 ```bash
-psql -U your_username -d lojagtec -f scripts/migrations/001_create_admin_and_products.sql
+go build -o lojagtec cmd/server/main.go
+./lojagtec
 ```
 
-This migration will:
-- Create the `admin_users` table
-- Create the `products` table with indexes
-- Insert default products from your existing code
-- Create a default admin user
+### 3. Creating the First Admin User
 
-### 3. Default Admin Credentials
+There is no default admin account. Create one manually using SQL or a small Go script.
 
-After running the migration, you can log in with:
+**Option A — Using `psql`:**
 
-- **Username**: `admin`
-- **Password**: `admin123`
+Generate a bcrypt hash (e.g., via an online tool or `python -c "import bcrypt; print(bcrypt.hashpw(b'yourpassword', bcrypt.gensalt()).decode())"`), then insert:
 
-**IMPORTANT**: Change this password immediately in a production environment!
+```sql
+INSERT INTO admin_users (username, password_hash, role, created_at)
+VALUES ('admin', '$2a$10$...', 'admin', NOW());
+```
+
+**Option B — Using the existing Go helper:**
+
+Write a small one-off Go file that imports `lojagtec/internal/admin`, calls `admin.SetDatabase(db)` and `admin.CreateAdmin("admin", "yourpassword")`, then run it.
+
+**IMPORTANT**: Use a strong password in production!
 
 ### 4. Build and Run
 
@@ -72,7 +71,7 @@ Run the server:
 ### Accessing the Admin Panel
 
 1. Navigate to `http://localhost:8080/admin/login`
-2. Enter your credentials (default: admin/admin123)
+2. Enter the credentials you created in step 3
 3. You'll be redirected to the admin dashboard at `http://localhost:8080/admin`
 
 ### Managing Products
@@ -158,7 +157,7 @@ lojagtec/
 │           └── uploads/                  # Directory for uploaded product images
 └── scripts/
     └── migrations/
-        └── 001_create_admin_and_products.sql  # Database schema
+        └── 1_baseline.sql  # Database baseline migration
 ```
 
 ## Troubleshooting
@@ -232,8 +231,8 @@ Currently, there's no UI to add more admin users. You can add them via SQL:
 -- First, generate a bcrypt hash for the password
 -- You can use an online tool or write a small Go program
 
-INSERT INTO admin_users (username, password_hash) 
-VALUES ('newadmin', '$2a$10$your_bcrypt_hash_here');
+INSERT INTO admin_users (username, password_hash, role, created_at)
+VALUES ('newadmin', '$2a$10$your_bcrypt_hash_here', 'admin', NOW());
 ```
 
 Or you can add a utility function in your Go code to create admin users programmatically.

@@ -38,7 +38,7 @@ func SetDatabase(database *sql.DB) {
 
 // HashPassword hashes a password using bcrypt
 func HashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 15)
 	return string(bytes), err
 }
 

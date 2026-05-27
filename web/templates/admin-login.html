@@ -6,6 +6,7 @@
     <title>Admin Login - Loja G-TEC</title>
     <link href="/static/images/favicon.png" type="image/x-icon" rel="icon">
     <link href="/static/css/dist/style.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js" integrity="sha384-/TgkGk7p307TH7EXJDuUlgG3Ce1UVolAOFopFekQkkXihi5u/6OCvVKyz1W+idaz" crossorigin="anonymous"></script>
   </head>
   <body class="bg-gray-100 min-h-screen flex items-center justify-center">
     <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
@@ -20,7 +21,7 @@
       </div>
       {{end}}
 
-      <form method="POST" action="/admin/login" class="space-y-6">
+      <form id="login-form" method="POST" action="/admin/login" class="space-y-6">
         <div>
           <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
             Nome de usuário
@@ -52,9 +53,16 @@
 
         <button 
           type="submit"
-          class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold shadow-md hover:shadow-lg"
+          id="login-btn"
+          class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold shadow-md hover:shadow-lg flex items-center justify-center"
         >
-          Login
+          <span id="login-btn-text">Login</span>
+          <span id="login-spinner" class="hidden">
+            <svg class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </span>
         </button>
       </form>
 
@@ -64,5 +72,27 @@
         </a>
       </div>
     </div>
+
+    <div id="login-loading" class="hidden htmx-indicator absolute inset-0 bg-white/50 flex items-center justify-center">
+      <svg class="animate-spin h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+    </div>
+
+    <script>
+      document.querySelector('#login-form').addEventListener('submit', function() {
+        const btn = document.querySelector('#login-btn');
+        const btnText = document.querySelector('#login-btn-text');
+        const spinner = document.querySelector('#login-spinner');
+        const loading = document.querySelector('#login-loading');
+
+        btn.disabled = true;
+        btnText.classList.add('hidden');
+        spinner.classList.remove('hidden');
+        loading.classList.remove('hidden');
+        loading.classList.add('flex');
+      });
+    </script>
   </body>
 </html>

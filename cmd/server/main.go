@@ -10,6 +10,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -36,14 +37,17 @@ type adminDashboardData struct {
 	CanViewOrders bool
 	Brands        []products.Brand
 	Products      []products.ProductOption
+	Categories    []products.Category
 }
 
 type adminEditData struct {
 	Product         *products.Product
 	Brands          []products.Brand
 	Products        []products.ProductOption
+	Categories      []products.Category
 	BrandSelections map[int]bool
 	FitSelections   map[int]bool
+	PartSelections  map[int]bool
 	ProductImages   []products.ProductImage
 }
 
@@ -52,10 +56,16 @@ type brandModalData struct {
 	Error string
 }
 
+type categoryModalData struct {
+	Category *products.Category
+	Error    string
+}
+
 type productPageData struct {
 	Product            *products.Product
 	Brands             []products.Brand
 	CompatibleProducts []products.Product
+	PartsForProduct    []products.Product
 	RelatedProducts    []products.Product
 }
 
@@ -153,6 +163,31 @@ func (w cacheControlWrapper) ServeHTTP(res http.ResponseWriter, req *http.Reques
 	w.handler.ServeHTTP(res, req)
 }
 
+// gzipFileServer wraps a FileServer to serve .gz files with Content-Encoding: gzip
+type gzipFileServer struct {
+	root http.FileSystem
+}
+
+func (g *gzipFileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Check if the requested file has .gz extension
+	if strings.HasSuffix(r.URL.Path, ".gz") {
+		// Set Content-Encoding header for gzipped files
+		w.Header().Set("Content-Encoding", "gzip")
+		// Determine Content-Type based on the underlying file type
+		// Remove .gz to determine the actual content type
+		nonGzPath := strings.TrimSuffix(r.URL.Path, ".gz")
+		contentType := mime.TypeByExtension(filepath.Ext(nonGzPath))
+		if contentType == "" {
+			// Default to application/octet-stream if unknown
+			contentType = "application/octet-stream"
+		}
+		w.Header().Set("Content-Type", contentType)
+	}
+
+	// Use the underlying file server
+	http.FileServer(g.root).ServeHTTP(w, r)
+}
+
 func main() {
 	db, err := database.Connect()
 	if err != nil {
@@ -179,7 +214,7 @@ func main() {
 		log.Fatalf("Could not create upload directory: %v", err)
 	}
 
-	fs := http.FileServer(http.Dir("web/static"))
+	fs := &gzipFileServer{root: http.Dir("web/static")}
 	http.Handle("/static/", http.StripPrefix("/static/", cacheControlWrapper{handler: fs, maxAge: 86400}))
 
 	// Cart modal route (must be before catch-all "/")
@@ -393,139 +428,48 @@ func main() {
 		checkout.HandleStripeWebhook(w, r)
 	})
 
-	// Product filter routes
-	http.HandleFunc("/products/bebedouros", func(w http.ResponseWriter, r *http.Request) {
+	// Consolidated product filter route
+	http.HandleFunc("/products/", func(w http.ResponseWriter, r *http.Request) {
+		slug := strings.TrimPrefix(r.URL.Path, "/products/")
 		brandIDs := parseBrandIDs(r.URL.Query().Get("brands"))
-		prods, err := products.GetProductsByCategoryAndBrands("bebedouros", brandIDs)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
 
-		templateFile := "web/templates/product-cards.html"
-		if len(prods) == 0 {
-			templateFile = "web/templates/product-empty-state.html"
-		}
+		var prods []products.Product
+		var err error
 
-		tmpl, err := template.ParseFiles(templateFile)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		tmpl.Execute(w, prods)
-	})
-
-	http.HandleFunc("/products/purificadores", func(w http.ResponseWriter, r *http.Request) {
-		brandIDs := parseBrandIDs(r.URL.Query().Get("brands"))
-		prods, err := products.GetProductsByCategoryAndBrands("purificadores", brandIDs)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		templateFile := "web/templates/product-cards.html"
-		if len(prods) == 0 {
-			templateFile = "web/templates/product-empty-state.html"
-		}
-
-		tmpl, err := template.ParseFiles(templateFile)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		tmpl.Execute(w, prods)
-	})
-
-	http.HandleFunc("/products/refis", func(w http.ResponseWriter, r *http.Request) {
-		brandIDs := parseBrandIDs(r.URL.Query().Get("brands"))
-		prods, err := products.GetProductsByCategoryAndBrands("refis", brandIDs)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		templateFile := "web/templates/product-cards.html"
-		if len(prods) == 0 {
-			templateFile = "web/templates/product-empty-state.html"
-		}
-
-		tmpl, err := template.ParseFiles(templateFile)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		tmpl.Execute(w, prods)
-	})
-
-	http.HandleFunc("/products/pecas", func(w http.ResponseWriter, r *http.Request) {
-		brandIDs := parseBrandIDs(r.URL.Query().Get("brands"))
-		prods, err := products.GetProductsByCategoryAndBrands("pecas", brandIDs)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		templateFile := "web/templates/product-cards.html"
-		if len(prods) == 0 {
-			templateFile = "web/templates/product-empty-state.html"
-		}
-
-		tmpl, err := template.ParseFiles(templateFile)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		tmpl.Execute(w, prods)
-	})
-
-	http.HandleFunc("/products/all", func(w http.ResponseWriter, r *http.Request) {
-		brandIDs := parseBrandIDs(r.URL.Query().Get("brands"))
-		prods, err := products.GetProductsByCategoryAndBrands("", brandIDs)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		templateFile := "web/templates/product-cards.html"
-		if len(prods) == 0 {
-			templateFile = "web/templates/product-empty-state.html"
-		}
-
-		tmpl, err := template.ParseFiles(templateFile)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		err = tmpl.Execute(w, prods)
-	})
-
-	// Offers route - displays products currently on offer
-	http.HandleFunc("/products/ofertas", func(w http.ResponseWriter, r *http.Request) {
-		offerProducts, err := offers.GetActiveOffers()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		// Convert offers to products format for template
-		prods := make([]products.Product, len(offerProducts))
-		for i, offer := range offerProducts {
-			// Get primary image from product_images
-			image, _ := products.GetPrimaryProductImage(offer.ProductID)
-			prods[i] = products.Product{
-				ID:             offer.ID,
-				ProductID:      offer.ProductID,
-				Name:           offer.Name,
-				Price:          offer.Price,
-				Image:          image,
-				Category:       offer.Category,
-				IsOnOffer:      true,
-				OfferPrice:     offer.OfferPrice,
-				OfferStartDate: offer.StartDate,
-				OfferEndDate:   offer.EndDate,
-				IsAvailable:    true,
+		switch slug {
+		case "all":
+			prods, err = products.GetProductsByCategoryAndBrands("", brandIDs)
+		case "ofertas":
+			offerProducts, err := offers.GetActiveOffers()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
 			}
+			prods = make([]products.Product, len(offerProducts))
+			for i, offer := range offerProducts {
+				image, _ := products.GetPrimaryProductImage(offer.ProductID)
+				prods[i] = products.Product{
+					ID:             offer.ID,
+					ProductID:      offer.ProductID,
+					Name:           offer.Name,
+					Price:          offer.Price,
+					Image:          image,
+					Category:       offer.Category,
+					CategoryName:   offer.CategoryName,
+					IsOnOffer:      true,
+					OfferPrice:     offer.OfferPrice,
+					OfferStartDate: offer.StartDate,
+					OfferEndDate:   offer.EndDate,
+					IsAvailable:    true,
+				}
+			}
+		default:
+			prods, err = products.GetProductsByCategoryAndBrands(slug, brandIDs)
+		}
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 		templateFile := "web/templates/product-cards.html"
@@ -551,12 +495,31 @@ func main() {
 
 		w.Header().Set("Content-Type", "text/html")
 		for _, brand := range brands {
-			fmt.Fprintf(w, `<button type="button" 
-				data-brand-id="%d" 
+			fmt.Fprintf(w, `<button type="button"
+				data-brand-id="%d"
 				class="brand-pill px-3 py-1 rounded-full text-sm transition-colors duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300"
 				onclick="toggleBrandFilter(this)">
 				%s
 			</button>`, brand.ID, brand.Name)
+		}
+	})
+
+	// Public categories endpoint for store filter
+	http.HandleFunc("/api/categories/options", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		categories, err := products.GetActiveCategories()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html")
+		for _, c := range categories {
+			fmt.Fprintf(w, `<option value="%s">%s</option>`, c.Slug, c.Name)
 		}
 	})
 
@@ -670,14 +633,21 @@ func main() {
 			return
 		}
 
-		// Get compatible products (for refis and pecas)
+		// Get compatible products (for categories that allow compatibility)
 		var compatibleProducts []products.Product
-		if product.Category == "refis" || product.Category == "pecas" {
+		if product.AllowsCompatibility {
 			compatibleProducts, err = products.GetCompatibleProductsByProductID(product.ProductID)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
+		}
+
+		// Get parts/refills compatible with this product
+		partsForProduct, err := products.GetPartsForProduct(product.ProductID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 		// Get related products (same category, excluding current product)
@@ -702,6 +672,7 @@ func main() {
 			Product:            product,
 			Brands:             brandNames,
 			CompatibleProducts: compatibleProducts,
+			PartsForProduct:    partsForProduct,
 			RelatedProducts:    relatedProducts,
 		}
 
@@ -760,6 +731,11 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		categories, err := products.GetAllCategories()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		tmpl, err := template.ParseFiles("web/templates/admin-dashboard.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -769,6 +745,7 @@ func main() {
 			CanViewOrders: true,
 			Brands:        brands,
 			Products:      productOptions,
+			Categories:    categories,
 		})
 	}))
 
@@ -783,6 +760,61 @@ func main() {
 			return
 		}
 		tmpl.Execute(w, brandModalData{})
+	}))
+
+	http.HandleFunc("/admin/categories", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		tmpl, err := template.ParseFiles("web/templates/admin-categories.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		categories, err := products.GetAllCategories()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		tmpl.Execute(w, categories)
+	}))
+
+	http.HandleFunc("/admin/categories/new", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		tmpl, err := template.ParseFiles("web/templates/admin-category-modal.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		tmpl.Execute(w, categoryModalData{})
+	}))
+
+	http.HandleFunc("/admin/categories/edit/", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		path := strings.TrimPrefix(r.URL.Path, "/admin/categories/edit/")
+		id, err := strconv.Atoi(path)
+		if err != nil {
+			http.Error(w, "Invalid category ID", http.StatusBadRequest)
+			return
+		}
+		category, err := products.GetCategoryByID(id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		tmpl, err := template.ParseFiles("web/templates/admin-category-modal.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		tmpl.Execute(w, categoryModalData{Category: category})
 	}))
 
 	http.HandleFunc("/admin/orders", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
@@ -916,6 +948,156 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(brand)
+	}))
+
+	// Admin category API routes
+	http.HandleFunc("/api/admin/categories/options", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		categories, err := products.GetAllCategories()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		tmpl, err := template.ParseFiles("web/templates/admin-category-options.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html")
+		tmpl.Execute(w, categories)
+	}))
+
+	http.HandleFunc("/api/admin/categories", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			categories, err := products.GetAllCategories()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			tmpl, err := template.ParseFiles("web/templates/admin-category-list.html")
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "text/html")
+			tmpl.Execute(w, categories)
+
+		case http.MethodPost:
+			if err := r.ParseForm(); err != nil {
+				http.Error(w, "Invalid form data", http.StatusBadRequest)
+				return
+			}
+			name := r.FormValue("name")
+			allowsCompatibility := r.FormValue("allows_compatibility") == "on"
+
+			category, err := products.CreateCategory(name, allowsCompatibility)
+			if err != nil {
+				if r.Header.Get("HX-Request") == "true" {
+					tmpl, tmplErr := template.ParseFiles("web/templates/admin-category-modal.html")
+					if tmplErr != nil {
+						http.Error(w, tmplErr.Error(), http.StatusInternalServerError)
+						return
+					}
+					w.WriteHeader(http.StatusBadRequest)
+					tmpl.Execute(w, categoryModalData{Error: err.Error()})
+					return
+				}
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			if r.Header.Get("HX-Request") == "true" {
+				w.Header().Set("HX-Trigger", "refreshCategories,closeCategoryModal")
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusCreated)
+			json.NewEncoder(w).Encode(category)
+
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))
+
+	http.HandleFunc("/api/admin/categories/", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/api/admin/categories/")
+
+		// Handle toggle: /api/admin/categories/{id}/toggle
+		if strings.HasSuffix(path, "/toggle") {
+			if r.Method != http.MethodPut {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+
+			idStr := strings.TrimSuffix(path, "/toggle")
+			id, err := strconv.Atoi(idStr)
+			if err != nil {
+				http.Error(w, "Invalid category ID", http.StatusBadRequest)
+				return
+			}
+
+			if err := products.ToggleCategoryActive(id); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			if r.Header.Get("HX-Request") == "true" {
+				w.Header().Set("HX-Trigger", "refreshCategories")
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		// Handle update: /api/admin/categories/{id}
+		if r.Method == http.MethodPut {
+			id, err := strconv.Atoi(path)
+			if err != nil {
+				http.Error(w, "Invalid category ID", http.StatusBadRequest)
+				return
+			}
+
+			if err := r.ParseForm(); err != nil {
+				http.Error(w, "Invalid form data", http.StatusBadRequest)
+				return
+			}
+
+			name := r.FormValue("name")
+			allowsCompatibility := r.FormValue("allows_compatibility") == "on"
+			isActive := r.FormValue("is_active") == "on"
+
+			if err := products.UpdateCategory(id, name, allowsCompatibility, isActive); err != nil {
+				if r.Header.Get("HX-Request") == "true" {
+					tmpl, tmplErr := template.ParseFiles("web/templates/admin-category-modal.html")
+					if tmplErr != nil {
+						http.Error(w, tmplErr.Error(), http.StatusInternalServerError)
+						return
+					}
+					w.WriteHeader(http.StatusBadRequest)
+					cat, _ := products.GetCategoryByID(id)
+					tmpl.Execute(w, categoryModalData{Category: cat, Error: err.Error()})
+					return
+				}
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			if r.Header.Get("HX-Request") == "true" {
+				w.Header().Set("HX-Trigger", "refreshCategories,closeCategoryModal")
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}))
 
 	// Banner management routes
@@ -1454,23 +1636,7 @@ func main() {
 		case http.MethodGet:
 			// Check if this is an HTMX request for HTML fragment
 			if r.Header.Get("HX-Request") == "true" {
-				// Create a simple function map for template
-				funcMap := template.FuncMap{
-					"formatCategory": func(category string) string {
-						categories := map[string]string{
-							"bebedouros":    "Bebedouros",
-							"purificadores": "Purificadores",
-							"refis":         "Refis",
-							"pecas":         "Peças",
-						}
-						if val, ok := categories[category]; ok {
-							return val
-						}
-						return category
-					},
-				}
-
-				tmpl, err := template.New("admin-product-list.html").Funcs(funcMap).ParseFiles("web/templates/admin-product-list.html")
+				tmpl, err := template.ParseFiles("web/templates/admin-product-list.html")
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return
@@ -1505,7 +1671,7 @@ func main() {
 			// Get form values
 			name := r.FormValue("name")
 			priceStr := r.FormValue("price")
-			category := r.FormValue("category")
+			categoryIDStr := r.FormValue("category_id")
 			description := r.FormValue("description")
 			sku := r.FormValue("sku")
 			isAvailableStr := r.FormValue("is_available")
@@ -1519,14 +1685,20 @@ func main() {
 				http.Error(w, "Invalid compatibility selection", http.StatusBadRequest)
 				return
 			}
+			partProductIDs, err := parseIDList(r.Form["part_product_ids"])
+			if err != nil {
+				http.Error(w, "Invalid part selection", http.StatusBadRequest)
+				return
+			}
 
-			if name == "" || priceStr == "" || category == "" {
+			if name == "" || priceStr == "" || categoryIDStr == "" {
 				http.Error(w, "Missing required fields", http.StatusBadRequest)
 				return
 			}
 
-			if len(fitsProductIDs) > 0 && !isPartsCategory(category) {
-				http.Error(w, "Compatibility is only allowed for refis or pecas", http.StatusBadRequest)
+			categoryID, err := strconv.Atoi(categoryIDStr)
+			if err != nil {
+				http.Error(w, "Invalid category", http.StatusBadRequest)
 				return
 			}
 
@@ -1538,7 +1710,7 @@ func main() {
 
 			isAvailable := isAvailableStr == "on"
 			// Create product
-			product, err := products.CreateProduct(name, price, category, description, sku, isAvailable, brandIDs, fitsProductIDs)
+			product, err := products.CreateProduct(name, price, categoryID, description, sku, isAvailable, brandIDs, fitsProductIDs, partProductIDs)
 			if err != nil {
 				// Return error message for HTMX
 				if r.Header.Get("HX-Request") == "true" {
@@ -1565,23 +1737,7 @@ func main() {
 
 			// Return product card HTML for HTMX
 			if r.Header.Get("HX-Request") == "true" {
-				// Create function map for template
-				funcMap := template.FuncMap{
-					"formatCategory": func(category string) string {
-						categories := map[string]string{
-							"bebedouros":    "Bebedouros",
-							"purificadores": "Purificadores",
-							"refis":         "Refis",
-							"pecas":         "Peças",
-						}
-						if val, ok := categories[category]; ok {
-							return val
-						}
-						return category
-					},
-				}
-
-				tmpl, err := template.New("admin-product-card.html").Funcs(funcMap).ParseFiles("web/templates/admin-product-card.html")
+				tmpl, err := template.ParseFiles("web/templates/admin-product-card.html")
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return
@@ -1676,7 +1832,7 @@ func main() {
 			// Get form values
 			name := r.FormValue("name")
 			priceStr := r.FormValue("price")
-			category := r.FormValue("category")
+			categoryIDStr := r.FormValue("category_id")
 			description := r.FormValue("description")
 			sku := r.FormValue("sku")
 			isAvailableStr := r.FormValue("is_available")
@@ -1690,14 +1846,20 @@ func main() {
 				http.Error(w, "Invalid compatibility selection", http.StatusBadRequest)
 				return
 			}
+			partProductIDs, err := parseIDList(r.Form["part_product_ids"])
+			if err != nil {
+				http.Error(w, "Invalid part selection", http.StatusBadRequest)
+				return
+			}
 
-			if name == "" || priceStr == "" || category == "" {
+			if name == "" || priceStr == "" || categoryIDStr == "" {
 				http.Error(w, "Missing required fields", http.StatusBadRequest)
 				return
 			}
 
-			if len(fitsProductIDs) > 0 && !isPartsCategory(category) {
-				http.Error(w, "Compatibility is only allowed for refis or pecas", http.StatusBadRequest)
+			categoryID, err := strconv.Atoi(categoryIDStr)
+			if err != nil {
+				http.Error(w, "Invalid category", http.StatusBadRequest)
 				return
 			}
 
@@ -1711,7 +1873,7 @@ func main() {
 			isAvailable := isAvailableStr == "on"
 
 			// Update product
-			if err := products.UpdateProduct(id, name, price, category, description, sku, isAvailable, brandIDs, fitsProductIDs); err != nil {
+			if err := products.UpdateProduct(id, name, price, categoryID, description, sku, isAvailable, brandIDs, fitsProductIDs, partProductIDs); err != nil {
 				// Return error message for HTMX
 				if r.Header.Get("HX-Request") == "true" {
 					tmpl, _ := template.ParseFiles("web/templates/admin-error-message.html")
@@ -1750,23 +1912,7 @@ func main() {
 					return
 				}
 
-				// Create function map for template
-				funcMap := template.FuncMap{
-					"formatCategory": func(category string) string {
-						categories := map[string]string{
-							"bebedouros":    "Bebedouros",
-							"purificadores": "Purificadores",
-							"refis":         "Refis",
-							"pecas":         "Peças",
-						}
-						if val, ok := categories[category]; ok {
-							return val
-						}
-						return category
-					},
-				}
-
-				tmpl, err := template.New("admin-product-card.html").Funcs(funcMap).ParseFiles("web/templates/admin-product-card.html")
+				tmpl, err := template.ParseFiles("web/templates/admin-product-card.html")
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return
@@ -1861,6 +2007,12 @@ func main() {
 				return
 			}
 
+			categories, err := products.GetAllCategories()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
 			tmpl, err := template.ParseFiles("web/templates/admin-edit-form.html")
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -1872,8 +2024,10 @@ func main() {
 				ProductImages:   productImages,
 				Brands:          brands,
 				Products:        filteredOptions,
+				Categories:      categories,
 				BrandSelections: buildIDSet(product.BrandIDs),
 				FitSelections:   buildIDSet(product.FitsProductIDs),
+				PartSelections:  buildIDSet(product.PartProductIDs),
 			}
 			tmpl.Execute(w, editData)
 			return
@@ -2026,8 +2180,4 @@ func buildIDSet(ids []int) map[int]bool {
 		set[id] = true
 	}
 	return set
-}
-
-func isPartsCategory(category string) bool {
-	return category == "refis" || category == "pecas"
 }

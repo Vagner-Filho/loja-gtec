@@ -1,0 +1,3 @@
+{{range .}}
+  <option value="{{.ID}}" data-allows-compatibility="{{.AllowsCompatibility}}">{{.Name}}{{if not .IsActive}} (Inativo){{end}}</option>
+{{end}}

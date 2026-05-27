@@ -2,21 +2,16 @@
 
 ## TL;DR
 
-1. Run the database migration:
-   ```bash
-   PGPASSWORD=postgres psql -U lojagtec -d lojagtec -f scripts/migrations/001_create_admin_and_products.sql
-   ```
-
-2. Build and run:
+1. Build and run (migrations apply automatically):
    ```bash
    go build -o lojagtec cmd/server/main.go
-   air
+   ./lojagtec
    ```
+
+2. Create the first admin user (see ADMIN_SETUP.md for options).
 
 3. Access admin panel:
    - URL: http://localhost:8080/admin/login
-   - Username: `admin`
-   - Password: `admin123`
 
 ## What's New (File Upload Update)
 
@@ -41,7 +36,7 @@
 - `web/templates/admin-dashboard.html` - Product management dashboard with file upload
 - `web/static/js/admin.js` - Admin panel JavaScript with FormData handling
 - `web/static/images/uploads/` - Directory for uploaded images
-- `scripts/migrations/001_create_admin_and_products.sql` - Database schema
+- `scripts/migrations/1_baseline.sql` - Database baseline migration
 
 ### Files Modified
 - `cmd/server/main.go` - Added file upload handling, multipart/form-data parsing, image validation

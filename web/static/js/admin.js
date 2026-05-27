@@ -3,6 +3,8 @@
 document.addEventListener('DOMContentLoaded', () => {
   setupImagePreviews();
   setupHTMXEventListeners();
+  setupCompatibilityToggle();
+  setupSKUListeners();
 });
 
 // Setup image preview functionality
@@ -41,6 +43,23 @@ function setupHTMXEventListeners() {
     }
   });
 
+  document.body.addEventListener('htmx:afterSwap', function(evt) {
+    if (evt.detail.successful) {
+      if (evt.detail.requestConfig.path === "/admin/brands/new") {
+        const brandDialog = document.querySelector("dialog#brand-modal");
+        if (brandDialog) {
+          brandDialog.showModal();
+        }
+      }
+      if (evt.detail.requestConfig.path === "/admin/categories/new" || evt.detail.requestConfig.path.includes("/admin/categories/edit/")) {
+        const categoryDialog = document.querySelector("dialog#category-modal");
+        if (categoryDialog) {
+          categoryDialog.showModal();
+        }
+      }
+    }
+  });
+
   // Handle edit form image preview (for dynamically loaded forms)
   document.body.addEventListener('change', function(evt) {
     if (evt.target.id === 'edit-image') {
@@ -64,6 +83,106 @@ function setupHTMXEventListeners() {
       }
     }
   });
+}
+
+// Setup compatibility input toggle based on category selection
+function setupCompatibilityToggle() {
+  function bindToggle(categorySelectId, compatSelectId, compatWrapperId, partsSelectId, partsWrapperId) {
+    const categorySelect = document.getElementById(categorySelectId);
+    const compatSelect = document.getElementById(compatSelectId);
+    const compatWrapper = document.getElementById(compatWrapperId);
+    const partsSelect = document.getElementById(partsSelectId);
+    const partsWrapper = document.getElementById(partsWrapperId);
+
+    if (!categorySelect) return;
+
+    function disableSelect(select, wrapper) {
+      if (select) {
+        select.disabled = true;
+        select.classList.add('bg-gray-100', 'cursor-not-allowed');
+      }
+      if (wrapper) wrapper.classList.add('opacity-50');
+    }
+
+    function enableSelect(select, wrapper) {
+      if (select) {
+        select.disabled = false;
+        select.classList.remove('bg-gray-100', 'cursor-not-allowed');
+      }
+      if (wrapper) wrapper.classList.remove('opacity-50');
+    }
+
+    function updateState() {
+      const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+      const hasSelection = categorySelect.value !== '';
+      const allowsCompatibility = selectedOption && selectedOption.getAttribute('data-allows-compatibility') === 'true';
+
+      if (!hasSelection) {
+        disableSelect(compatSelect, compatWrapper);
+        disableSelect(partsSelect, partsWrapper);
+      } else if (allowsCompatibility) {
+        enableSelect(compatSelect, compatWrapper);
+        disableSelect(partsSelect, partsWrapper);
+      } else {
+        disableSelect(compatSelect, compatWrapper);
+        enableSelect(partsSelect, partsWrapper);
+      }
+    }
+
+    categorySelect.addEventListener('change', updateState);
+    categorySelect.addEventListener('htmx:afterSwap', updateState);
+    updateState();
+  }
+
+  bindToggle('category_id', 'fits_product_ids', 'compat-wrapper', 'part_product_ids', 'parts-wrapper');
+  bindToggle('edit-category', 'edit-fits_product_ids', 'edit-compat-wrapper', 'edit-part_product_ids', 'edit-parts-wrapper');
+}
+
+function setupSKUListeners() {
+  const catEl = document.querySelector('select[name="category_id"]')
+  const brandEl = document.querySelector('select[name="brand_ids"]')
+  const priceEl = document.querySelector('input[name="price"]')
+  const nameEl = document.querySelector('input[name="name"]')
+  const skuInput = document.querySelector('input[name="sku"]')
+
+  async function handleCategorySKU() {
+    let sku = '';
+    let appendedIdentifiers = 0;
+    if (catEl && catEl.selectedIndex > 0) {
+      sku = catEl.options[catEl.selectedIndex].text.slice(0, 3).toUpperCase();
+      appendedIdentifiers++;
+    }
+    if (brandEl) {
+      const selectedBrands = brandEl.selectedOptions;
+      if (selectedBrands && selectedBrands.length > 0) {
+        for (const selectedBrand of selectedBrands) {
+          sku += '-' + selectedBrand.text.slice(0, 3).toUpperCase();
+        }
+        appendedIdentifiers++;
+      }
+    }
+    if (nameEl && nameEl.value !== "") {
+      sku += '-' + nameEl.value.slice(0, 3).toUpperCase();
+      appendedIdentifiers++;
+    }
+    if (priceEl && priceEl.value) {
+      sku += '-' + priceEl.value.slice(0, 3).toUpperCase();
+      appendedIdentifiers++;
+    }
+
+    if (appendedIdentifiers === 4) {
+      sku += '-' + (new Date().getTime() / .7).toString().split('').reverse().join('').slice(1, 5);
+    }
+
+    skuInput.value = sku;
+  }
+
+  if (skuInput) {
+    catEl?.addEventListener('input', handleCategorySKU)
+    brandEl?.addEventListener('input', handleCategorySKU)
+    nameEl?.addEventListener('input', handleCategorySKU)
+    priceEl?.addEventListener('input', handleCategorySKU)
+  }
 }
 
 // Modal controls for HTMX
@@ -108,7 +227,6 @@ function closeOrderModal() {
   }
 }
 
-console.log('hello')
 // Make functions globally available
 window.openEditModal = openEditModal;
 window.closeEditModal = closeEditModal;
