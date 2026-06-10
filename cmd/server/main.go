@@ -35,9 +35,11 @@ const (
 
 type adminDashboardData struct {
 	CanViewOrders bool
+	CanViewUsers  bool
 	Brands        []products.Brand
 	Products      []products.ProductOption
 	Categories    []products.Category
+	Location      string
 }
 
 type adminEditData struct {
@@ -241,7 +243,7 @@ func main() {
 
 	// Public routes
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		tmpl, err := template.ParseFiles("web/templates/index.html", "web/templates/footer.html")
+		tmpl, err := template.ParseFiles("web/templates/index.html", "web/templates/footer.html", "web/templates/header.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -328,6 +330,7 @@ func main() {
 			FirstName:     r.FormValue("firstName"),
 			LastName:      r.FormValue("lastName"),
 			Address:       r.FormValue("address"),
+			AddressNumber: r.FormValue("addressNumber"),
 			Neighborhood:  r.FormValue("neighborhood"),
 			City:          r.FormValue("city"),
 			State:         r.FormValue("state"),
@@ -662,7 +665,7 @@ func main() {
 			"sub": func(a, b float64) float64 {
 				return a - b
 			},
-		}).ParseFiles("web/templates/product.html", "web/templates/footer.html")
+		}).ParseFiles("web/templates/product.html", "web/templates/footer.html", "web/templates/header.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -736,16 +739,25 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		tmpl, err := template.ParseFiles("web/templates/admin-dashboard.html")
+		tmpl, err := template.ParseFiles("web/templates/admin-dashboard.html", "web/templates/admin-header.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		role, found := admin.RoleFromRequest(r)
+		if !found {
+			http.Error(w, "Recurso não encontrado", http.StatusForbidden)
+			return
+		}
+
 		tmpl.Execute(w, adminDashboardData{
 			CanViewOrders: true,
+			CanViewUsers:  role == "admin",
 			Brands:        brands,
 			Products:      productOptions,
 			Categories:    categories,
+			Location:      "dashboard",
 		})
 	}))
 
@@ -767,17 +779,18 @@ func main() {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		tmpl, err := template.ParseFiles("web/templates/admin-categories.html")
+		tmpl, err := template.ParseFiles("web/templates/admin-categories.html", "web/templates/admin-header.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		categories, err := products.GetAllCategories()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		tmpl.Execute(w, categories)
+
+		role, _ := admin.RoleFromRequest(r)
+		tmpl.Execute(w, map[string]any{
+			"Location":      "categories",
+			"CanViewOrders": true,
+			"CanViewUsers":  role == "admin",
+		})
 	}))
 
 	http.HandleFunc("/admin/categories/new", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
@@ -818,30 +831,96 @@ func main() {
 	}))
 
 	http.HandleFunc("/admin/orders", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
-		tmpl, err := template.ParseFiles("web/templates/admin-orders.html")
+		tmpl, err := template.ParseFiles("web/templates/admin-orders.html", "web/templates/admin-header.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		tmpl.Execute(w, nil)
+
+		role, _ := admin.RoleFromRequest(r)
+		tmpl.Execute(w, map[string]interface{}{
+			"Location":      "orders",
+			"CanViewOrders": true,
+			"CanViewUsers":  role == "admin",
+		})
 	}))
 
 	http.HandleFunc("/admin/banners", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
-		tmpl, err := template.ParseFiles("web/templates/admin-banners.html")
+		tmpl, err := template.ParseFiles("web/templates/admin-banners.html", "web/templates/admin-header.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		tmpl.Execute(w, nil)
+
+		role, _ := admin.RoleFromRequest(r)
+		tmpl.Execute(w, map[string]interface{}{
+			"Location":      "banners",
+			"CanViewOrders": true,
+			"CanViewUsers":  role == "admin",
+		})
 	}))
 
 	http.HandleFunc("/admin/offers", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {
-		tmpl, err := template.ParseFiles("web/templates/admin-offers.html")
+		tmpl, err := template.ParseFiles("web/templates/admin-offers.html", "web/templates/admin-header.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		tmpl.Execute(w, nil)
+
+		role, _ := admin.RoleFromRequest(r)
+		tmpl.Execute(w, map[string]interface{}{
+			"Location":      "offers",
+			"CanViewOrders": true,
+			"CanViewUsers":  role == "admin",
+		})
+	}))
+
+	http.HandleFunc("/admin/users", admin.RequireRole("admin")(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		admins, err := admin.GetAllAdmins()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		tmpl, err := template.ParseFiles("web/templates/admin-users.html", "web/templates/admin-header.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		role, _ := admin.RoleFromRequest(r)
+		tmpl.Execute(w, map[string]interface{}{
+			"Admins":        admins,
+			"Location":      "users",
+			"CanViewOrders": true,
+			"CanViewUsers":  role == "admin",
+		})
+	}))
+
+	http.HandleFunc("/admin/users/edit/", admin.RequireRole("admin")(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		path := strings.TrimPrefix(r.URL.Path, "/admin/users/edit/")
+		id, err := strconv.Atoi(path)
+		if err != nil {
+			http.Error(w, "Invalid user ID", http.StatusBadRequest)
+			return
+		}
+		a, err := admin.GetAdminByID(id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		tmpl, err := template.ParseFiles("web/templates/admin-user-modal.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		tmpl.Execute(w, map[string]interface{}{"Admin": a})
 	}))
 
 	// Admin API routes
@@ -1629,6 +1708,198 @@ func main() {
 			"Order":                order,
 			"CanViewFinancialData": canViewFinancialData,
 		})
+	}))
+
+	http.HandleFunc("/api/admin/users", admin.RequireRole("admin")(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			admins, err := admin.GetAllAdmins()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			tmpl, err := template.ParseFiles("web/templates/admin-user-list.html")
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "text/html")
+			tmpl.Execute(w, admins)
+
+		case http.MethodPost:
+			if err := r.ParseForm(); err != nil {
+				http.Error(w, "Invalid form data", http.StatusBadRequest)
+				return
+			}
+			username := r.FormValue("username")
+			password := r.FormValue("password")
+			confirmPassword := r.FormValue("confirm_password")
+			email := r.FormValue("email")
+			cpf := r.FormValue("cpf")
+			phone := r.FormValue("phone")
+			role := r.FormValue("role")
+
+			if username == "" || password == "" || email == "" || cpf == "" || phone == "" {
+				http.Error(w, "Todos os campos são obrigatórios", http.StatusBadRequest)
+				return
+			}
+			if password != confirmPassword {
+				if r.Header.Get("HX-Request") == "true" {
+					tmpl, _ := template.ParseFiles("web/templates/admin-error-message.html")
+					tmpl.Execute(w, "As senhas não coincidem")
+					return
+				}
+				http.Error(w, "Passwords do not match", http.StatusBadRequest)
+				return
+			}
+
+			err := admin.CreateAdminWithRole(username, password, email, cpf, phone, role)
+			if err != nil {
+				if r.Header.Get("HX-Request") == "true" {
+					tmpl, _ := template.ParseFiles("web/templates/admin-error-message.html")
+					tmpl.Execute(w, err.Error())
+					return
+				}
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			if r.Header.Get("HX-Request") == "true" {
+				w.Header().Set("HX-Trigger", "refreshUsers")
+				tmpl, _ := template.ParseFiles("web/templates/admin-success-message.html")
+				tmpl.Execute(w, "Usuário criado com sucesso")
+				return
+			}
+			w.WriteHeader(http.StatusCreated)
+
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))
+
+	http.HandleFunc("/api/admin/users/", admin.RequireRole("admin")(func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/api/admin/users/")
+
+		// Handle toggle: /api/admin/users/{id}/toggle
+		if strings.HasSuffix(path, "/toggle") {
+			if r.Method != http.MethodPut {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+
+			idStr := strings.TrimSuffix(path, "/toggle")
+			id, err := strconv.Atoi(idStr)
+			if err != nil {
+				http.Error(w, "Invalid user ID", http.StatusBadRequest)
+				return
+			}
+
+			_, err = admin.ToggleAdminActive(id)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			if r.Header.Get("HX-Request") == "true" {
+				w.Header().Set("HX-Trigger", "refreshUsers")
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		// Handle password update: /api/admin/users/{id}/password
+		if strings.HasSuffix(path, "/password") {
+			if r.Method != http.MethodPut {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+
+			idStr := strings.TrimSuffix(path, "/password")
+			id, err := strconv.Atoi(idStr)
+			if err != nil {
+				http.Error(w, "Invalid user ID", http.StatusBadRequest)
+				return
+			}
+
+			if err := r.ParseForm(); err != nil {
+				http.Error(w, "Invalid form data", http.StatusBadRequest)
+				return
+			}
+
+			password := r.FormValue("password")
+			confirmPassword := r.FormValue("confirm_password")
+			if password == "" || password != confirmPassword {
+				if r.Header.Get("HX-Request") == "true" {
+					tmpl, _ := template.ParseFiles("web/templates/admin-error-message.html")
+					tmpl.Execute(w, "As senhas não coincidem ou estão vazias")
+					return
+				}
+				http.Error(w, "Passwords do not match", http.StatusBadRequest)
+				return
+			}
+
+			if err := admin.UpdateAdminPassword(id, password); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			if r.Header.Get("HX-Request") == "true" {
+				w.Header().Set("HX-Trigger", "refreshUsers")
+				tmpl, _ := template.ParseFiles("web/templates/admin-success-message.html")
+				tmpl.Execute(w, "Senha atualizada com sucesso")
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		// Handle update: /api/admin/users/{id}
+		if r.Method == http.MethodPut {
+			id, err := strconv.Atoi(path)
+			if err != nil {
+				http.Error(w, "Invalid user ID", http.StatusBadRequest)
+				return
+			}
+
+			if err := r.ParseForm(); err != nil {
+				http.Error(w, "Invalid form data", http.StatusBadRequest)
+				return
+			}
+
+			username := r.FormValue("username")
+			email := r.FormValue("email")
+			cpf := r.FormValue("cpf")
+			phone := r.FormValue("phone")
+			role := r.FormValue("role")
+			if username == "" || email == "" || cpf == "" || phone == "" {
+				http.Error(w, "Todos os campos são obrigatórios", http.StatusBadRequest)
+				return
+			}
+
+			if err := admin.UpdateAdmin(id, username, email, cpf, phone, role); err != nil {
+				if r.Header.Get("HX-Request") == "true" {
+					tmpl, _ := template.ParseFiles("web/templates/admin-user-modal.html")
+					a, _ := admin.GetAdminByID(id)
+					w.WriteHeader(http.StatusBadRequest)
+					tmpl.Execute(w, map[string]interface{}{"Admin": a, "Error": err.Error()})
+					return
+				}
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			if r.Header.Get("HX-Request") == "true" {
+				w.Header().Set("HX-Trigger", "refreshUsers,closeUserModal")
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}))
 
 	http.HandleFunc("/api/admin/products", admin.RequireRole("admin", "product_admin")(func(w http.ResponseWriter, r *http.Request) {

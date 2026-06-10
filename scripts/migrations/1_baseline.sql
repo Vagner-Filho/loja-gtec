@@ -26,7 +26,11 @@ CREATE TABLE IF NOT EXISTS admin_users (
     id SERIAL PRIMARY KEY,
     username TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    cpf TEXT UNIQUE NOT NULL,
+    phone TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'admin' CHECK (role IN ('admin', 'product_admin')),
+    is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

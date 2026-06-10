@@ -18,7 +18,7 @@
   <div class="border border-gray-200 rounded-lg p-4">
     <h4 class="text-lg font-semibold text-gray-800 mb-3">Entrega</h4>
     <div class="text-sm text-gray-700">
-      <div>{{ .Order.Address }}, {{ .Order.Neighborhood }}</div>
+      <div>{{ .Order.Address }}, {{ .Order.AddressNumber }} - {{ .Order.Neighborhood }}</div>
       <div>{{ .Order.City }} - {{ .Order.State }}, {{ .Order.ZipCode }}</div>
       {{- if .Order.Apartment }}
         <div>{{ .Order.Apartment }}</div>

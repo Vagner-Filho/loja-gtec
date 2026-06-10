@@ -1,0 +1,60 @@
+{{ block "admin-header" . }}
+<header class="glass-dark header-sticky text-white">
+  <div class="container mx-auto px-4">
+    <div class="flex justify-between items-center h-16">
+      <!-- Logo -->
+      <a href="/" class="hidden md:flex items-center gap-2 group">
+        <div
+          class="w-9 h-9 rounded-lg flex items-center justify-center group-hover:bg-white/20 transition-colors duration-300">
+          <img src="/static/images/logo_transparent.png" class="size-5" />
+        </div>
+        <span class="text-xl font-bold tracking-tight">Loja
+          <span class="text-blue-200">G-TEC</span></span>
+      </a>
+      <nav class="flex items-center gap-4">
+        <a href="/admin" class="px-4 hover:text-blue-200 transition-colors{{ if eq .Location "dashboard" }} pointer-events-none bg-white/20 rounded-xl{{ end }}">Dashboard</a>
+        <a href="/admin/banners" class="px-4 hover:text-blue-200 transition-colors{{ if eq .Location "banners" }} pointer-events-none bg-white/20 rounded-xl{{ end }}">Banners</a>
+        <a href="/admin/offers" class="px-4 hover:text-blue-200 transition-colors{{ if eq .Location "offers" }} pointer-events-none bg-white/20 rounded-xl{{ end }}">Ofertas</a>
+        <a href="/admin/categories" class="px-4 hover:text-blue-200 transition-colors{{ if eq .Location "categories" }} pointer-events-none bg-white/20 rounded-xl{{ end }}">Categorias</a>
+        {{ if .CanViewOrders }}
+        <a href="/admin/orders" class="px-4 hover:text-blue-200 transition-colors{{ if eq .Location "orders" }} pointer-events-none bg-white/20 rounded-xl{{ end }}">Pedidos</a>
+        {{ end }}
+        {{ if .CanViewUsers }}
+        <a href="/admin/users" class="px-4 hover:text-blue-200 transition-colors{{ if eq .Location "users" }} pointer-events-none bg-white/20 rounded-xl{{ end }}">Usuários</a>
+        {{ end }}
+        <a href="/" class="px-4 hover:text-blue-200 transition-colors">Ver Loja</a>
+        <a href="/admin/logout" class="px-4 py-2 bg-red-500 hover:bg-red-600 rounded transition-colors">Logout</a>
+      </nav>
+    </div>
+  </div>
+</header>
+<!-- Mobile Menu Overlay -->
+<div id="mobile-menu-overlay"
+  class="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 hidden opacity-0 transition-opacity duration-300"></div>
+<!-- Mobile Menu -->
+<nav id="mobile-menu"
+  class="fixed top-0 right-0 h-full w-72 bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out">
+  <div class="p-6">
+    <div class="flex justify-between items-center mb-8">
+      <span class="text-xl font-bold text-gray-800">Menu</span>
+      <button id="mobile-menu-close" class="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24"
+          stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    <div class="space-y-2">
+      <a href="/admin/banners" class="px-4 hover:text-blue-200 transition-colors">Banners</a>
+      <a href="/admin/offers" class="px-4 hover:text-blue-200 transition-colors">Ofertas</a>
+      <a href="/admin/categories" class="px-4 hover:text-blue-200 transition-colors">Categorias</a>
+      {{ if .CanViewOrders }}
+      <a href="/admin/orders" class="px-4 hover:text-blue-200 transition-colors">Pedidos</a>
+      {{ end }}
+      <a href="/admin/users" class="px-4 hover:text-blue-200 transition-colors">Usuários</a>
+      <a href="/" class="px-4 hover:text-blue-200 transition-colors">Ver Loja</a>
+      <a href="/admin/logout" class="px-4 py-2 bg-red-500 hover:bg-red-600 rounded transition-colors">Logout</a>
+    </div>
+  </div>
+</nav>
+{{ end }}

@@ -29,6 +29,18 @@ function formatCEP(value) {
   return cleaned.slice(0, 5) + '-' + cleaned.slice(5, 8);
 }
 
+// Format phone as (XX) XXXXX-XXXX
+function formatPhone(value) {
+  const cleaned = value.replace(/\D/g, '').slice(0, 11);
+  if (cleaned.length <= 2) {
+    return cleaned;
+  }
+  if (cleaned.length <= 7) {
+    return cleaned.replace(/(\d{2})(\d+)/, '($1) $2');
+  }
+  return cleaned.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+}
+
 // Show zip code validation error
 function showZipCodeError(message) {
   const zipCodeInput = document.getElementById('zipCode');
@@ -227,6 +239,25 @@ function renderCheckoutItems() {
 document.addEventListener('DOMContentLoaded', () => {
   renderCheckoutItems();
   setupPaymentMethodSwitching();
+
+  // Phone formatting
+  const phoneInput = document.getElementById('phone');
+  if (phoneInput) {
+    phoneInput.addEventListener('input', (e) => {
+      e.target.value = formatPhone(e.target.value);
+    });
+  }
+
+  // Strip non-digits from phone before HTMX submission
+  const checkoutForm = document.getElementById('main-checkout-form');
+  if (checkoutForm) {
+    checkoutForm.addEventListener('htmx:beforeRequest', (e) => {
+      const phone = document.getElementById('phone');
+      if (phone) {
+        phone.value = phone.value.replace(/\D/g, '');
+      }
+    });
+  }
 
   // CPF formatting
   const cpfInput = document.getElementById('cpf');

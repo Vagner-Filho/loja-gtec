@@ -19,6 +19,7 @@ type Order struct {
 	FirstName       string    `json:"first_name"`
 	LastName        string    `json:"last_name"`
 	Address         string    `json:"address"`
+	AddressNumber   string    `json:"address_number"`
 	Neighborhood    string    `json:"neighborhood"`
 	City            string    `json:"city"`
 	State           string    `json:"state"`
@@ -53,6 +54,7 @@ type CheckoutForm struct {
 	FirstName     string `json:"first_name"`
 	LastName      string `json:"last_name"`
 	Address       string `json:"address"`
+	AddressNumber string `json:"address_number"`
 	Neighborhood  string `json:"neighborhood"`
 	City          string `json:"city"`
 	State         string `json:"state"`
@@ -151,12 +153,17 @@ func ValidateName(name, field string) *ValidationError {
 }
 
 // ValidateAddress validates address fields
-func ValidateAddress(address, neighborhood, city, state, zipCode string) []ValidationError {
+func ValidateAddress(address, addressNumber, neighborhood, city, state, zipCode string) []ValidationError {
 	var errors []ValidationError
 
 	address = strings.TrimSpace(address)
 	if address == "" {
 		errors = append(errors, ValidationError{Field: "address", Message: "Endereço é obrigatório"})
+	}
+
+	addressNumber = strings.TrimSpace(addressNumber)
+	if addressNumber == "" {
+		errors = append(errors, ValidationError{Field: "addressNumber", Message: "Número é obrigatório"})
 	}
 
 	neighborhood = strings.TrimSpace(neighborhood)
@@ -366,7 +373,7 @@ func ValidateCheckoutForm(form CheckoutForm) ValidationResult {
 	}
 
 	// Validate address
-	addressErrors := ValidateAddress(form.Address, form.Neighborhood, form.City, form.State, form.ZipCode)
+	addressErrors := ValidateAddress(form.Address, form.AddressNumber, form.Neighborhood, form.City, form.State, form.ZipCode)
 	errors = append(errors, addressErrors...)
 
 	// Validate CPF/CNPJ for all payment methods
@@ -455,9 +462,9 @@ func CreateOrder(form CheckoutForm) (*Order, error) {
 	query := `
 		INSERT INTO orders (
 			order_number, email, phone, first_name, last_name, address,
-			neighborhood, city, state, zip_code, apartment, cpf_cnpj,
+			address_number, neighborhood, city, state, zip_code, apartment, cpf_cnpj,
 			payment_method, total_amount, status
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 		RETURNING id, created_at, updated_at
 	`
 
@@ -470,6 +477,7 @@ func CreateOrder(form CheckoutForm) (*Order, error) {
 		form.FirstName,
 		form.LastName,
 		form.Address,
+		form.AddressNumber,
 		form.Neighborhood,
 		form.City,
 		form.State,
@@ -492,6 +500,7 @@ func CreateOrder(form CheckoutForm) (*Order, error) {
 	order.FirstName = form.FirstName
 	order.LastName = form.LastName
 	order.Address = form.Address
+	order.AddressNumber = form.AddressNumber
 	order.Neighborhood = form.Neighborhood
 	order.City = form.City
 	order.State = form.State
@@ -591,7 +600,7 @@ func GetOrderByID(orderID int) (*Order, error) {
 
 	query := `
 		SELECT id, order_number, email, phone, first_name, last_name, address,
-		       neighborhood, city, state, zip_code, apartment, cpf_cnpj, payment_method,
+		       address_number, neighborhood, city, state, zip_code, apartment, cpf_cnpj, payment_method,
 		       payment_status, stripe_payment_id, total_amount, status, created_at, updated_at
 		FROM orders WHERE id = $1
 	`
@@ -600,7 +609,7 @@ func GetOrderByID(orderID int) (*Order, error) {
 	var stripePaymentID sql.NullString
 	err := db.QueryRow(query, orderID).Scan(
 		&order.ID, &order.OrderNumber, &order.Email, &order.Phone, &order.FirstName,
-		&order.LastName, &order.Address, &order.Neighborhood, &order.City, &order.State,
+		&order.LastName, &order.Address, &order.AddressNumber, &order.Neighborhood, &order.City, &order.State,
 		&order.ZipCode, &order.Apartment, &order.CPF, &order.PaymentMethod, &order.PaymentStatus,
 		&stripePaymentID, &order.TotalAmount, &order.Status, &order.CreatedAt, &order.UpdatedAt,
 	)
@@ -742,7 +751,7 @@ func GetOrders(filters OrderFilters) ([]Order, error) {
 
 	baseQuery := `
 		SELECT id, order_number, email, phone, first_name, last_name, address,
-		       neighborhood, city, state, zip_code, apartment, cpf_cnpj, payment_method,
+		       address_number, neighborhood, city, state, zip_code, apartment, cpf_cnpj, payment_method,
 		       payment_status, stripe_payment_id, total_amount, status, created_at, updated_at
 		FROM orders
 	`
@@ -784,7 +793,7 @@ func GetOrders(filters OrderFilters) ([]Order, error) {
 		var stripePaymentID sql.NullString
 		err := rows.Scan(
 			&order.ID, &order.OrderNumber, &order.Email, &order.Phone, &order.FirstName,
-			&order.LastName, &order.Address, &order.Neighborhood, &order.City, &order.State,
+			&order.LastName, &order.Address, &order.AddressNumber, &order.Neighborhood, &order.City, &order.State,
 			&order.ZipCode, &order.Apartment, &order.CPF, &order.PaymentMethod, &order.PaymentStatus,
 			&stripePaymentID, &order.TotalAmount, &order.Status, &order.CreatedAt, &order.UpdatedAt,
 		)

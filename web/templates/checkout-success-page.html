@@ -6,17 +6,26 @@
     <title>Pedido Confirmado - Lojagtec</title>
     <link href="/static/css/dist/style.css" rel="stylesheet">
   </head>
-  <body class="bg-gray-100 text-gray-800">
-    <header class="bg-white shadow-md">
-      <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-        <h1 class="text-2xl font-bold">Lojagtec</h1>
-        <nav class="flex items-center">
-          <a href="/" class="px-4 text-blue-500 hover:text-blue-700">Voltar à Loja</a>
-        </nav>
+  <body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col">
+    <header class="glass-dark header-sticky text-white">
+      <div class="container mx-auto px-4">
+        <div class="flex justify-between items-center h-16">
+          <!-- Logo -->
+          <a href="/" class="flex items-center gap-2 group">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center group-hover:bg-white/20 transition-colors duration-300">
+              <img src="/static/images/logo_transparent.png" class="size-5" />
+            </div>
+            <span class="text-xl font-bold tracking-tight">Loja
+              <span class="text-blue-200">G-TEC</span></span>
+          </a>
+          <nav class="flex items-center">
+            <a href="/" class="px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/10 transition-all duration-200">Voltar à Loja</a>
+          </nav>
+        </div>
       </div>
     </header>
 
-    <main class="container mx-auto px-4 py-10">
+    <main class="container mx-auto px-4 py-10 flex-1">
       <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-lg p-8 text-center">
         <div class="mb-6">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 mx-auto text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">

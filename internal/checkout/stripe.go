@@ -16,9 +16,9 @@ import (
 	"lojagtec/internal/logging"
 	"lojagtec/internal/orders"
 
-	"github.com/stripe/stripe-go/v84"
-	checkoutsession "github.com/stripe/stripe-go/v84/checkout/session"
-	"github.com/stripe/stripe-go/v84/webhook"
+	"github.com/stripe/stripe-go/v86"
+	checkoutsession "github.com/stripe/stripe-go/v86/checkout/session"
+	"github.com/stripe/stripe-go/v86/webhook"
 )
 
 var ErrStripeNotConfigured = errors.New("stripe_not_configured")

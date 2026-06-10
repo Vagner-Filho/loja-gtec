@@ -6,6 +6,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"regexp"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -15,7 +17,11 @@ type Admin struct {
 	ID           int
 	Username     string
 	PasswordHash string
+	Email        string
+	CPF          string
+	Phone        string
 	Role         string
+	IsActive     bool
 	CreatedAt    time.Time
 }
 
@@ -49,15 +55,30 @@ func CheckPassword(password, hash string) bool {
 }
 
 // CreateAdmin creates a new admin user
-func CreateAdmin(username, password string) error {
-	return CreateAdminWithRole(username, password, "admin")
+func CreateAdmin(username, password, email, cpf, phone string) error {
+	return CreateAdminWithRole(username, password, email, cpf, phone, "admin")
+}
+
+// ValidateCPF strips non-digits and checks length
+func ValidateCPF(cpf string) (string, error) {
+	re := regexp.MustCompile(`\D`)
+	clean := re.ReplaceAllString(cpf, "")
+	if len(clean) != 11 {
+		return "", fmt.Errorf("CPF inválido: deve conter 11 dígitos")
+	}
+	return clean, nil
 }
 
 // CreateAdminWithRole creates a new admin user with a role
-func CreateAdminWithRole(username, password, role string) error {
+func CreateAdminWithRole(username, password, email, cpf, phone, role string) error {
 	validRoles := map[string]bool{"admin": true, "product_admin": true}
 	if !validRoles[role] {
 		return fmt.Errorf("função inválida: %s (permitidas: admin, product_admin)", role)
+	}
+
+	cleanCPF, err := ValidateCPF(cpf)
+	if err != nil {
+		return err
 	}
 
 	hash, err := HashPassword(password)
@@ -66,8 +87,8 @@ func CreateAdminWithRole(username, password, role string) error {
 	}
 
 	_, err = db.Exec(
-		"INSERT INTO admin_users (username, password_hash, role, created_at) VALUES ($1, $2, $3, $4)",
-		username, hash, role, time.Now(),
+		"INSERT INTO admin_users (username, password_hash, email, cpf, phone, role, is_active, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+		username, hash, strings.TrimSpace(email), cleanCPF, strings.TrimSpace(phone), role, true, time.Now(),
 	)
 	return err
 }
@@ -76,9 +97,9 @@ func CreateAdminWithRole(username, password, role string) error {
 func GetAdminByUsername(username string) (*Admin, error) {
 	var admin Admin
 	err := db.QueryRow(
-		"SELECT id, username, password_hash, role, created_at FROM admin_users WHERE username = $1",
+		"SELECT id, username, password_hash, email, cpf, phone, role, is_active, created_at FROM admin_users WHERE username = $1",
 		username,
-	).Scan(&admin.ID, &admin.Username, &admin.PasswordHash, &admin.Role, &admin.CreatedAt)
+	).Scan(&admin.ID, &admin.Username, &admin.PasswordHash, &admin.Email, &admin.CPF, &admin.Phone, &admin.Role, &admin.IsActive, &admin.CreatedAt)
 
 	if err != nil {
 		return nil, err
@@ -143,6 +164,10 @@ func Login(w http.ResponseWriter, username, password string) error {
 
 	if !CheckPassword(password, admin.PasswordHash) {
 		return fmt.Errorf("Credenciais Inválidas")
+	}
+
+	if !admin.IsActive {
+		return fmt.Errorf("Conta desativada")
 	}
 
 	token, err := CreateSession(admin.ID, admin.Role)
@@ -253,4 +278,93 @@ func RoleFromRequest(r *http.Request) (string, bool) {
 	}
 
 	return session.Role, true
+}
+
+// GetAllAdmins retrieves all admin users ordered by creation date
+func GetAllAdmins() ([]Admin, error) {
+	rows, err := db.Query(
+		"SELECT id, username, password_hash, email, cpf, phone, role, is_active, created_at FROM admin_users ORDER BY created_at DESC",
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var admins []Admin
+	for rows.Next() {
+		var a Admin
+		if err := rows.Scan(&a.ID, &a.Username, &a.PasswordHash, &a.Email, &a.CPF, &a.Phone, &a.Role, &a.IsActive, &a.CreatedAt); err != nil {
+			return nil, err
+		}
+		admins = append(admins, a)
+	}
+	return admins, rows.Err()
+}
+
+// GetAdminByID retrieves an admin by ID
+func GetAdminByID(id int) (*Admin, error) {
+	var a Admin
+	err := db.QueryRow(
+		"SELECT id, username, password_hash, email, cpf, phone, role, is_active, created_at FROM admin_users WHERE id = $1",
+		id,
+	).Scan(&a.ID, &a.Username, &a.PasswordHash, &a.Email, &a.CPF, &a.Phone, &a.Role, &a.IsActive, &a.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &a, nil
+}
+
+// UpdateAdmin updates an admin's details
+func UpdateAdmin(id int, username, email, cpf, phone, role string) error {
+	validRoles := map[string]bool{"admin": true, "product_admin": true}
+	if !validRoles[role] {
+		return fmt.Errorf("função inválida: %s (permitidas: admin, product_admin)", role)
+	}
+
+	cleanCPF, err := ValidateCPF(cpf)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(
+		"UPDATE admin_users SET username = $1, email = $2, cpf = $3, phone = $4, role = $5 WHERE id = $6",
+		username, strings.TrimSpace(email), cleanCPF, strings.TrimSpace(phone), role, id,
+	)
+	return err
+}
+
+// UpdateAdminPassword updates an admin's password
+func UpdateAdminPassword(id int, password string) error {
+	hash, err := HashPassword(password)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(
+		"UPDATE admin_users SET password_hash = $1 WHERE id = $2",
+		hash, id,
+	)
+	return err
+}
+
+// ToggleAdminActive toggles an admin user's active status
+func ToggleAdminActive(id int) (bool, error) {
+	var current bool
+	err := db.QueryRow(
+		"SELECT is_active FROM admin_users WHERE id = $1",
+		id,
+	).Scan(&current)
+	if err != nil {
+		return false, err
+	}
+
+	newStatus := !current
+	_, err = db.Exec(
+		"UPDATE admin_users SET is_active = $1 WHERE id = $2",
+		newStatus, id,
+	)
+	if err != nil {
+		return false, err
+	}
+	return newStatus, nil
 }

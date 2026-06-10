@@ -57,6 +57,12 @@ function setupHTMXEventListeners() {
           categoryDialog.showModal();
         }
       }
+      if (evt.detail.requestConfig.path.includes("/admin/users/edit/")) {
+        const userDialog = document.querySelector("dialog#user-modal");
+        if (userDialog) {
+          userDialog.showModal();
+        }
+      }
     }
   });
 

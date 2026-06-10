@@ -8,4 +8,4 @@ require (
 	golang.org/x/crypto v0.44.0
 )
 
-require github.com/stripe/stripe-go/v84 v84.2.0
+require github.com/stripe/stripe-go/v86 v86.0.0

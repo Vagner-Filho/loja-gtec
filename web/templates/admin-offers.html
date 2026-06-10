@@ -9,19 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js" integrity="sha384-/TgkGk7p307TH7EXJDuUlgG3Ce1UVolAOFopFekQkkXihi5u/6OCvVKyz1W+idaz" crossorigin="anonymous"></script>
   </head>
   <body class="bg-gray-100 min-h-screen">
-    <!-- Header -->
-    <header class="bg-blue-700 shadow-md text-white">
-      <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-        <h1 class="text-2xl font-bold">Gerenciar Ofertas - G-TEC</h1>
-        <nav class="flex items-center gap-4">
-          <a href="/admin" class="px-4 hover:text-blue-200 transition-colors">Dashboard</a>
-          <a href="/admin/banners" class="px-4 hover:text-blue-200 transition-colors">Banners</a>
-          <a href="/admin/orders" class="px-4 hover:text-blue-200 transition-colors">Pedidos</a>
-          <a href="/" class="px-4 hover:text-blue-200 transition-colors">Ver Loja</a>
-          <a href="/admin/logout" class="px-4 py-2 bg-red-500 hover:bg-red-600 rounded transition-colors">Logout</a>
-        </nav>
-      </div>
-    </header>
+    {{ template "admin-header" . }}
 
     <main class="container mx-auto px-4 py-8">
       <!-- Add Offer Section -->

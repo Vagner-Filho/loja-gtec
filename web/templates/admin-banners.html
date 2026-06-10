@@ -10,18 +10,7 @@
   </head>
   <body class="bg-gray-100 min-h-screen">
     <!-- Header -->
-    <header class="bg-blue-700 shadow-md text-white">
-      <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-        <h1 class="text-2xl font-bold">Gerenciar Banners - G-TEC</h1>
-        <nav class="flex items-center gap-4">
-          <a href="/admin" class="px-4 hover:text-blue-200 transition-colors">Dashboard</a>
-          <a href="/admin/offers" class="px-4 hover:text-blue-200 transition-colors">Ofertas</a>
-          <a href="/admin/orders" class="px-4 hover:text-blue-200 transition-colors">Pedidos</a>
-          <a href="/" class="px-4 hover:text-blue-200 transition-colors">Ver Loja</a>
-          <a href="/admin/logout" class="px-4 py-2 bg-red-500 hover:bg-red-600 rounded transition-colors">Logout</a>
-        </nav>
-      </div>
-    </header>
+    {{ template "admin-header" . }}
 
     <main class="container mx-auto px-4 py-8">
       <!-- Add Banner Section -->
@@ -29,7 +18,7 @@
         <h2 class="text-2xl font-bold mb-4 text-gray-800">Adicionar Banner</h2>
 
         <form id="add-banner-form" 
-              class="grid grid-cols-1 md:grid-cols-2 gap-4" 
+              class="grid grid-cols-1 md:grid-cols-2 gap-4"
               hx-post="/api/admin/banners"
               hx-target="#banners-list"
               hx-swap="innerHTML"
