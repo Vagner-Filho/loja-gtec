@@ -45,6 +45,33 @@ This is a project is an online shop for a regional business that sells water fil
 
     The application will be available at `http://localhost:8080`.
 
+## Deployment
+
+A `deploy.sh` script is provided for production deployments.
+
+1. **Configure the script** (set env vars or edit defaults):
+
+    ```bash
+    export REMOTE_HOST=your.vps.ip
+    export REMOTE_USER=root
+    export REMOTE_DIR=/opt/lojagtec
+    export SERVICE_NAME=lojagtec
+    ```
+
+2. **Run the deployment**:
+
+    ```bash
+    ./deploy.sh
+    ```
+
+    The script will:
+    - Build and minify the CSS
+    - Run tests and vet the code
+    - Build the Linux binary
+    - `rsync` files to the VPS
+    - Restart the systemd service (if configured)
+    - Verify the service is responding
+
 ## Project Structure
 
 ```

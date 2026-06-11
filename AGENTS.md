@@ -18,6 +18,10 @@ This document provides guidelines for AI agents working in this Go/HTMX/Tailwind
 - **Run a single test:** `go test -run ^TestName$ path/to/package`
 - **Lint:** `go fmt ./...` and `go vet ./...`
 
+### Deploy
+
+- **Deploy to production:** `./deploy.sh` (configure via env vars or edit defaults)
+
 ### Code Style
 
 - **Imports:** Group into three blocks: standard library, third-party, internal packages
