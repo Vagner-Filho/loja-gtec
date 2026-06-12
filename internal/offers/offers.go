@@ -13,6 +13,7 @@ type Offer struct {
 	Name         string     `json:"name"`
 	Price        float64    `json:"price"`
 	OfferPrice   float64    `json:"offerPrice"`
+	Image        string     `json:"image"`
 	Category     string     `json:"category"`
 	CategoryName string     `json:"categoryName"`
 	StartDate    *time.Time `json:"startDate,omitempty"`
@@ -60,11 +61,12 @@ func IsOfferActive(offer Offer) bool {
 func GetActiveOffers() ([]Offer, error) {
 	query := `
 		SELECT o.id, o.product_id, i.name, i.price, o.offer_price,
-		       c.slug, c.name, o.start_date, o.end_date, o.is_active
+		       COALESCE(pi.image_url, ''), c.slug, c.name, o.start_date, o.end_date, o.is_active
 		FROM offers o
 		JOIN products p ON o.product_id = p.id
 		JOIN items i ON p.item_id = i.id
 		JOIN categories c ON p.category_id = c.id
+		LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = TRUE
 		WHERE o.is_active = TRUE
 		ORDER BY o.id DESC
 	`
@@ -81,7 +83,7 @@ func GetActiveOffers() ([]Offer, error) {
 		var o Offer
 		var startDate, endDate sql.NullTime
 		err := rows.Scan(&o.ID, &o.ProductID, &o.Name, &o.Price, &o.OfferPrice,
-			&o.Category, &o.CategoryName, &startDate, &endDate, &o.IsActive)
+			&o.Image, &o.Category, &o.CategoryName, &startDate, &endDate, &o.IsActive)
 		if err != nil {
 			return nil, err
 		}
@@ -112,11 +114,12 @@ func GetActiveOffers() ([]Offer, error) {
 func GetAllOffers() ([]Offer, error) {
 	query := `
 		SELECT o.id, o.product_id, i.name, i.price, o.offer_price,
-		       c.slug, c.name, o.start_date, o.end_date, o.is_active
+		       COALESCE(pi.image_url, ''), c.slug, c.name, o.start_date, o.end_date, o.is_active
 		FROM offers o
 		JOIN products p ON o.product_id = p.id
 		JOIN items i ON p.item_id = i.id
 		JOIN categories c ON p.category_id = c.id
+		LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = TRUE
 		ORDER BY o.id DESC
 	`
 
@@ -131,7 +134,7 @@ func GetAllOffers() ([]Offer, error) {
 		var o Offer
 		var startDate, endDate sql.NullTime
 		err := rows.Scan(&o.ID, &o.ProductID, &o.Name, &o.Price, &o.OfferPrice,
-			&o.Category, &o.CategoryName, &startDate, &endDate, &o.IsActive)
+			&o.Image, &o.Category, &o.CategoryName, &startDate, &endDate, &o.IsActive)
 		if err != nil {
 			return nil, err
 		}
@@ -281,11 +284,12 @@ func ToggleOfferStatus(offerID int) (bool, error) {
 func GetOfferByProductID(productID int) (*Offer, error) {
 	query := `
 		SELECT o.id, o.product_id, i.name, i.price, o.offer_price,
-		       c.slug, c.name, o.start_date, o.end_date, o.is_active
+		       COALESCE(pi.image_url, ''), c.slug, c.name, o.start_date, o.end_date, o.is_active
 		FROM offers o
 		JOIN products p ON o.product_id = p.id
 		JOIN items i ON p.item_id = i.id
 		JOIN categories c ON p.category_id = c.id
+		LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = TRUE
 		WHERE o.product_id = $1
 	`
 
@@ -293,7 +297,7 @@ func GetOfferByProductID(productID int) (*Offer, error) {
 	var startDate, endDate sql.NullTime
 	err := db.QueryRow(query, productID).Scan(
 		&o.ID, &o.ProductID, &o.Name, &o.Price, &o.OfferPrice,
-		&o.Category, &o.CategoryName, &startDate, &endDate, &o.IsActive,
+		&o.Image, &o.Category, &o.CategoryName, &startDate, &endDate, &o.IsActive,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -316,11 +320,12 @@ func GetOfferByProductID(productID int) (*Offer, error) {
 func GetActiveOfferByProductID(productID int) (*Offer, error) {
 	query := `
 		SELECT o.id, o.product_id, i.name, i.price, o.offer_price,
-		       c.slug, c.name, o.start_date, o.end_date, o.is_active
+		       COALESCE(pi.image_url, ''), c.slug, c.name, o.start_date, o.end_date, o.is_active
 		FROM offers o
 		JOIN products p ON o.product_id = p.id
 		JOIN items i ON p.item_id = i.id
 		JOIN categories c ON p.category_id = c.id
+		LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = TRUE
 		WHERE o.product_id = $1 AND o.is_active = TRUE
 	`
 
@@ -328,7 +333,7 @@ func GetActiveOfferByProductID(productID int) (*Offer, error) {
 	var startDate, endDate sql.NullTime
 	err := db.QueryRow(query, productID).Scan(
 		&o.ID, &o.ProductID, &o.Name, &o.Price, &o.OfferPrice,
-		&o.Category, &o.CategoryName, &startDate, &endDate, &o.IsActive,
+		&o.Image, &o.Category, &o.CategoryName, &startDate, &endDate, &o.IsActive,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {

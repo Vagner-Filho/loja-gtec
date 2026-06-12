@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
@@ -188,6 +189,56 @@ func (g *gzipFileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Use the underlying file server
 	http.FileServer(g.root).ServeHTTP(w, r)
+}
+
+// responseRecorder wraps http.ResponseWriter to capture status and body
+// for automatic error logging.
+type responseRecorder struct {
+	http.ResponseWriter
+	statusCode  int
+	body        bytes.Buffer
+	wroteHeader bool
+}
+
+func (rr *responseRecorder) WriteHeader(code int) {
+	if !rr.wroteHeader {
+		rr.statusCode = code
+		rr.wroteHeader = true
+		rr.ResponseWriter.WriteHeader(code)
+	}
+}
+
+func (rr *responseRecorder) Write(b []byte) (int, error) {
+	if !rr.wroteHeader {
+		rr.WriteHeader(http.StatusOK)
+	}
+	if rr.body.Len() < 1024 {
+		rr.body.Write(b)
+	}
+	return rr.ResponseWriter.Write(b)
+}
+
+// loggingMiddleware intercepts all HTTP responses and logs errors automatically.
+func loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if rec := recover(); rec != nil {
+				log.Printf("[PANIC] %s %s: %v", r.Method, r.URL.Path, rec)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			}
+		}()
+
+		rr := &responseRecorder{ResponseWriter: w}
+		next.ServeHTTP(rr, r)
+
+		if rr.statusCode >= 400 {
+			body := rr.body.String()
+			if len(body) > 200 {
+				body = body[:200] + "..."
+			}
+			log.Printf("[ERROR] %s %s - %d: %s", r.Method, r.URL.Path, rr.statusCode, body)
+		}
+	})
 }
 
 func main() {
@@ -450,13 +501,12 @@ func main() {
 			}
 			prods = make([]products.Product, len(offerProducts))
 			for i, offer := range offerProducts {
-				image, _ := products.GetPrimaryProductImage(offer.ProductID)
 				prods[i] = products.Product{
 					ID:             offer.ID,
 					ProductID:      offer.ProductID,
 					Name:           offer.Name,
 					Price:          offer.Price,
-					Image:          image,
+					Image:          offer.Image,
 					Category:       offer.Category,
 					CategoryName:   offer.CategoryName,
 					IsOnOffer:      true,
@@ -1408,7 +1458,10 @@ func main() {
 				}
 
 				w.Header().Set("Content-Type", "text/html")
-				tmpl.Execute(w, offerList)
+				err = tmpl.Execute(w, offerList)
+				if err != nil {
+					log.Printf("[ERROR] template execution: %v", err.Error())
+				}
 			} else {
 				// Return JSON for non-HTMX requests
 				w.Header().Set("Content-Type", "application/json")
@@ -2095,7 +2148,7 @@ func main() {
 		case http.MethodPut:
 			// Parse multipart form
 			if err := r.ParseMultipartForm(maxUploadSize); err != nil {
-				fmt.Printf("\n%v\n", err.Error())
+				log.Printf("[ERROR] multipart form parse error: %v", err)
 				http.Error(w, "File too large or invalid form data", http.StatusBadRequest)
 				return
 			}
@@ -2307,9 +2360,9 @@ func main() {
 		http.Error(w, "Not found", http.StatusNotFound)
 	}))
 
-	fmt.Println("Server starting at port 8080")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		fmt.Printf("Error starting server: %s\n", err)
+	log.Println("Server starting at port 8080")
+	if err := http.ListenAndServe(":8080", loggingMiddleware(http.DefaultServeMux)); err != nil {
+		log.Printf("Error starting server: %s", err)
 	}
 }
 
