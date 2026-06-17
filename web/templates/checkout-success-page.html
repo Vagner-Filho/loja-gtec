@@ -47,5 +47,15 @@
       </div>
     </main>
     {{ template "footer" }}
+    <script>
+      (function() {
+        localStorage.removeItem('cart');
+        var badge = document.getElementById('cart-badge');
+        if (badge) {
+          badge.textContent = '0';
+          badge.classList.add('hidden');
+        }
+      })();
+    </script>
   </body>
 </html>
