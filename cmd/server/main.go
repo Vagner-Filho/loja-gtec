@@ -1071,6 +1071,8 @@ func main() {
 		}
 		if r.Header.Get("HX-Request") == "true" {
 			w.Header().Set("HX-Trigger", "refreshBrands,closeBrandModal")
+			w.Header().Set("X-Toast-Message", "Marca criada com sucesso!")
+			w.Header().Set("X-Toast-Type", "success")
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
@@ -1141,6 +1143,8 @@ func main() {
 
 			if r.Header.Get("HX-Request") == "true" {
 				w.Header().Set("HX-Trigger", "refreshCategories,closeCategoryModal")
+				w.Header().Set("X-Toast-Message", "Categoria criada com sucesso!")
+				w.Header().Set("X-Toast-Type", "success")
 				w.WriteHeader(http.StatusNoContent)
 				return
 			}
@@ -1177,6 +1181,8 @@ func main() {
 
 			if r.Header.Get("HX-Request") == "true" {
 				w.Header().Set("HX-Trigger", "refreshCategories")
+				w.Header().Set("X-Toast-Message", "Categoria atualizada com sucesso!")
+				w.Header().Set("X-Toast-Type", "success")
 				w.WriteHeader(http.StatusOK)
 				return
 			}
@@ -1219,6 +1225,8 @@ func main() {
 
 			if r.Header.Get("HX-Request") == "true" {
 				w.Header().Set("HX-Trigger", "refreshCategories,closeCategoryModal")
+				w.Header().Set("X-Toast-Message", "Categoria atualizada com sucesso!")
+				w.Header().Set("X-Toast-Type", "success")
 				w.WriteHeader(http.StatusOK)
 				return
 			}
@@ -2047,7 +2055,8 @@ func main() {
 			}
 
 			// Handle multiple image uploads
-			if err := handleMultipleImageUploads(r, "images", product.ProductID); err != nil {
+			images, err := handleMultipleImageUploads(r, "images", product.ProductID)
+			if err != nil {
 				// Clean up product if image upload fails
 				products.DeleteProduct(product.ID)
 				if r.Header.Get("HX-Request") == "true" {
@@ -2068,6 +2077,16 @@ func main() {
 				}
 
 				w.Header().Set("Content-Type", "text/html")
+				w.Header().Set("X-Toast-Message", "Produto criado com sucesso!")
+				w.Header().Set("X-Toast-Type", "success")
+				if len(images) > 0 {
+					for _, img := range images {
+						if img.IsPrimary == true {
+							product.Image = img.ImageURL
+							break
+						}
+					}
+				}
 				tmpl.Execute(w, product)
 			} else {
 				w.Header().Set("Content-Type", "application/json")
@@ -2128,6 +2147,8 @@ func main() {
 
 				// Return empty response for HTMX
 				if r.Header.Get("HX-Request") == "true" {
+					w.Header().Set("X-Toast-Message", "Imagem excluída com sucesso!")
+					w.Header().Set("X-Toast-Type", "success")
 					w.WriteHeader(http.StatusOK)
 				} else {
 					w.Header().Set("Content-Type", "application/json")
@@ -2216,12 +2237,13 @@ func main() {
 			}
 
 			// Handle multiple image uploads
-			if err := handleMultipleImageUploads(r, "images", product.ProductID); err != nil {
+			_, imgerr := handleMultipleImageUploads(r, "images", product.ProductID)
+			if imgerr != nil {
 				if r.Header.Get("HX-Request") == "true" {
 					tmpl, _ := template.ParseFiles("web/templates/admin-error-message.html")
-					tmpl.Execute(w, err.Error())
+					tmpl.Execute(w, imgerr.Error())
 				} else {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
+					http.Error(w, imgerr.Error(), http.StatusInternalServerError)
 				}
 				return
 			}
@@ -2244,6 +2266,8 @@ func main() {
 
 				w.Header().Set("Content-Type", "text/html")
 				w.Header().Set("HX-Trigger", "closeEditModal")
+				w.Header().Set("X-Toast-Message", "Produto atualizado com sucesso!")
+				w.Header().Set("X-Toast-Type", "success")
 				tmpl.Execute(w, updatedProduct)
 			} else {
 				w.Header().Set("Content-Type", "application/json")
@@ -2272,6 +2296,8 @@ func main() {
 
 			// Return empty response for HTMX (element will be deleted)
 			if r.Header.Get("HX-Request") == "true" {
+				w.Header().Set("X-Toast-Message", "Produto excluído com sucesso!")
+				w.Header().Set("X-Toast-Type", "success")
 				w.WriteHeader(http.StatusOK)
 			} else {
 				w.Header().Set("Content-Type", "application/json")
@@ -2413,44 +2439,45 @@ func handleImageUpload(r *http.Request, fieldName string) (string, error) {
 	return "/static/images/uploads/" + filename, nil
 }
 
-func handleMultipleImageUploads(r *http.Request, fieldName string, productID int) error {
+func handleMultipleImageUploads(r *http.Request, fieldName string, productID int) ([]products.ProductImage, error) {
 	// Parse multipart form if not already parsed
 	if r.MultipartForm == nil {
 		if err := r.ParseMultipartForm(maxUploadSize); err != nil {
-			return fmt.Errorf("failed to parse form: %v", err)
+			return nil, fmt.Errorf("failed to parse form: %v", err)
 		}
 	}
 
 	// Get the files
 	files := r.MultipartForm.File[fieldName]
 	if len(files) == 0 {
-		return nil // No images to upload
+		return nil, nil // No images to upload
 	}
 
 	// Process each uploaded file
+	productImages := make([]products.ProductImage, len(files))
 	for i, fileHeader := range files {
 		file, err := fileHeader.Open()
 		if err != nil {
-			return fmt.Errorf("failed to open file %s: %v", fileHeader.Filename, err)
+			return nil, fmt.Errorf("failed to open file %s: %v", fileHeader.Filename, err)
 		}
 		defer file.Close()
 
 		// Validate file size
 		if fileHeader.Size > maxUploadSize {
-			return fmt.Errorf("file %s exceeds maximum allowed size of 5MB", fileHeader.Filename)
+			return nil, fmt.Errorf("Arquivo %s excede tamanho máximo permitido de 5MB", fileHeader.Filename)
 		}
 
 		// Validate file type
 		contentType := fileHeader.Header.Get("Content-Type")
 		if !strings.HasPrefix(contentType, "image/") {
-			return fmt.Errorf("file %s must be an image", fileHeader.Filename)
+			return nil, fmt.Errorf("Arquivo %s deve ser uma imagem", fileHeader.Filename)
 		}
 
 		// Generate unique filename
 		ext := filepath.Ext(fileHeader.Filename)
 		randomBytes := make([]byte, 16)
 		if _, err := rand.Read(randomBytes); err != nil {
-			return fmt.Errorf("failed to generate random filename: %v", err)
+			return nil, fmt.Errorf("failed to generate random filename: %v", err)
 		}
 		filename := hex.EncodeToString(randomBytes) + ext
 
@@ -2460,27 +2487,28 @@ func handleMultipleImageUploads(r *http.Request, fieldName string, productID int
 		// Create destination file
 		dst, err := os.Create(filePath)
 		if err != nil {
-			return fmt.Errorf("failed to create file: %v", err)
+			return nil, fmt.Errorf("failed to create file: %v", err)
 		}
 		defer dst.Close()
 
 		// Copy uploaded file to destination
 		if _, err := io.Copy(dst, file); err != nil {
 			os.Remove(filePath)
-			return fmt.Errorf("failed to save file: %v", err)
+			return nil, fmt.Errorf("failed to save file: %v", err)
 		}
 
 		imagePath := "/static/images/uploads/" + filename
 		isPrimary := i == 0 // First image is primary
 
-		_, err = products.CreateProductImage(productID, imagePath, i, isPrimary)
+		productImage, err := products.CreateProductImage(productID, imagePath, i, isPrimary)
 		if err != nil {
 			os.Remove(filePath)
-			return fmt.Errorf("failed to save image to database: %v", err)
+			return nil, fmt.Errorf("failed to save image to database: %v", err)
 		}
+		productImages = append(productImages, *productImage)
 	}
 
-	return nil
+	return productImages, nil
 }
 
 func parseIDList(values []string) ([]int, error) {

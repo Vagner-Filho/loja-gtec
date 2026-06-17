@@ -31,7 +31,7 @@ html {
 /* Subtle water-inspired card - teal accent for product theme */
 .water-card {
   background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
-  box-shadow: 
+  box-shadow:
     0 1px 3px rgba(0, 0, 0, 0.05),
     0 4px 12px rgba(13, 148, 136, 0.08);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -39,7 +39,7 @@ html {
 
 .water-card:hover {
   transform: translateY(-3px);
-  box-shadow: 
+  box-shadow:
     0 4px 6px rgba(0, 0, 0, 0.05),
     0 12px 24px rgba(13, 148, 136, 0.12);
 }
@@ -205,9 +205,17 @@ button {
 
 /* Cart icon pulse on add */
 @keyframes cart-pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.15); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.15);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 .cart-pulse {
@@ -216,8 +224,13 @@ button {
 
 /* Loading shimmer for products */
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 .loading-shimmer {
@@ -229,4 +242,13 @@ button {
 /* Focus visible styles for accessibility - teal for actions */
 *:focus-visible {
   @apply outline-none ring-2 ring-teal-500 ring-offset-2;
+}
+
+.toast-enter {
+  translate: 0 0;
+  opacity: 1;
+}
+
+.toast-exit {
+  translate: -120% 0;
 }

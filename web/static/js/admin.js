@@ -38,7 +38,7 @@ function setupHTMXEventListeners() {
       // Reset add form if it was the target
       if (target.id === 'add-product-form') {
         target.reset();
-        document.getElementById('add-image-preview').classList.add('hidden');
+        document.getElementById('add-image-preview')?.classList.add('hidden');
       }
     }
   });
@@ -62,6 +62,9 @@ function setupHTMXEventListeners() {
         if (userDialog) {
           userDialog.showModal();
         }
+      }
+      if (evt.detail.requestConfig.path.includes("/api/admin/products/") && evt.detail.requestConfig.verb === "put") {
+        window?.closeEditModal();
       }
     }
   });
@@ -177,7 +180,7 @@ function setupSKUListeners() {
     }
 
     if (appendedIdentifiers === 4) {
-      sku += '-' + (new Date().getTime() / .7).toString().split('').reverse().join('').slice(1, 5);
+      sku += '-' + (new Date().getTime() / .7).toString().replaceAll('.', '').split('').reverse().join('').slice(1, 5);
     }
 
     skuInput.value = sku;
