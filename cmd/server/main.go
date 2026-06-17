@@ -1303,6 +1303,8 @@ func main() {
 
 			if r.Header.Get("HX-Request") == "true" {
 				w.Header().Set("HX-Trigger", "refreshBanners")
+				w.Header().Set("X-Toast-Message", "Banner criado com sucesso!")
+				w.Header().Set("X-Toast-Type", "success")
 				w.WriteHeader(http.StatusCreated)
 				return
 			}
@@ -1341,6 +1343,8 @@ func main() {
 
 			if r.Header.Get("HX-Request") == "true" {
 				w.Header().Set("HX-Trigger", "refreshBanners")
+				w.Header().Set("X-Toast-Message", "Banner atualizado com sucesso!")
+				w.Header().Set("X-Toast-Type", "success")
 				w.WriteHeader(http.StatusOK)
 				return
 			}
@@ -1381,6 +1385,8 @@ func main() {
 
 			if r.Header.Get("HX-Request") == "true" {
 				w.Header().Set("HX-Trigger", "refreshBanners")
+				w.Header().Set("X-Toast-Message", "Banner atualizado com sucesso!")
+				w.Header().Set("X-Toast-Type", "success")
 				w.WriteHeader(http.StatusOK)
 				return
 			}
@@ -1418,6 +1424,8 @@ func main() {
 
 		if r.Header.Get("HX-Request") == "true" {
 			w.Header().Set("HX-Trigger", "refreshBanners")
+			w.Header().Set("X-Toast-Message", "Banner excluído com sucesso!")
+			w.Header().Set("X-Toast-Type", "success")
 			w.WriteHeader(http.StatusOK)
 			return
 		}
@@ -1533,6 +1541,8 @@ func main() {
 
 			if r.Header.Get("HX-Request") == "true" {
 				w.Header().Set("HX-Trigger", "refreshOffers")
+				w.Header().Set("X-Toast-Message", "Oferta criada com sucesso!")
+				w.Header().Set("X-Toast-Type", "success")
 				w.WriteHeader(http.StatusCreated)
 				return
 			}
@@ -1618,6 +1628,8 @@ func main() {
 
 			if r.Header.Get("HX-Request") == "true" {
 				w.Header().Set("HX-Trigger", "refreshOffers")
+				w.Header().Set("X-Toast-Message", "Oferta atualizada com sucesso!")
+				w.Header().Set("X-Toast-Type", "success")
 				w.WriteHeader(http.StatusOK)
 				return
 			}
@@ -1643,6 +1655,8 @@ func main() {
 
 			if r.Header.Get("HX-Request") == "true" {
 				w.Header().Set("HX-Trigger", "refreshOffers")
+				w.Header().Set("X-Toast-Message", "Oferta desativada com sucesso!")
+				w.Header().Set("X-Toast-Type", "success")
 				w.WriteHeader(http.StatusOK)
 				return
 			}
@@ -1748,6 +1762,11 @@ func main() {
 			return
 		}
 
+		if r.Header.Get("HX-Request") == "true" {
+			w.Header().Set("X-Toast-Message", "Status do pedido atualizado com sucesso!")
+			w.Header().Set("X-Toast-Type", "success")
+		}
+
 		// Return the updated order row
 		order, err := orders.GetOrderByID(id)
 		if err != nil {
@@ -1827,6 +1846,8 @@ func main() {
 
 			if r.Header.Get("HX-Request") == "true" {
 				w.Header().Set("HX-Trigger", "refreshUsers")
+				w.Header().Set("X-Toast-Message", "Usuário criado com sucesso!")
+				w.Header().Set("X-Toast-Type", "success")
 				tmpl, _ := template.ParseFiles("web/templates/admin-success-message.html")
 				tmpl.Execute(w, "Usuário criado com sucesso")
 				return
@@ -1863,6 +1884,8 @@ func main() {
 
 			if r.Header.Get("HX-Request") == "true" {
 				w.Header().Set("HX-Trigger", "refreshUsers")
+				w.Header().Set("X-Toast-Message", "Usuário atualizado com sucesso!")
+				w.Header().Set("X-Toast-Type", "success")
 				w.WriteHeader(http.StatusOK)
 				return
 			}
@@ -1908,6 +1931,8 @@ func main() {
 
 			if r.Header.Get("HX-Request") == "true" {
 				w.Header().Set("HX-Trigger", "refreshUsers")
+				w.Header().Set("X-Toast-Message", "Senha atualizada com sucesso!")
+				w.Header().Set("X-Toast-Type", "success")
 				tmpl, _ := template.ParseFiles("web/templates/admin-success-message.html")
 				tmpl.Execute(w, "Senha atualizada com sucesso")
 				return
@@ -1953,6 +1978,8 @@ func main() {
 
 			if r.Header.Get("HX-Request") == "true" {
 				w.Header().Set("HX-Trigger", "refreshUsers,closeUserModal")
+				w.Header().Set("X-Toast-Message", "Usuário atualizado com sucesso!")
+				w.Header().Set("X-Toast-Type", "success")
 				w.WriteHeader(http.StatusOK)
 				return
 			}
